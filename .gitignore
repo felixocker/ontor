@@ -1,0 +1,10 @@
+# dirs
+.venv
+__pycache__/
+
+# file types
+*.owl
+*.log
+
+# individual files
+

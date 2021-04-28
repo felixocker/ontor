@@ -1,0 +1,5 @@
+test,,ops2,some,,computer,True
+test,,owns,some,,computer,True
+test,,owns,min,1,computer,
+test,,owns,max,5,computer,
+test2,,owns,min,6,computer,

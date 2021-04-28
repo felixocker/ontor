@@ -1,0 +1,13 @@
+{
+	"op": [
+		["ops1", "owns", "human", "computer", true, false, false, false, false, false, false, null],
+        ["ops2", "owns", "human", "computer", false, false, false, false, false, false, false, "ops1"],
+        ["ops4", "ops2", "human", "computer", false, false, false, false, false, false, false, null],
+        ["ops3", "owns", "human", "computer", false, false, false, false, false, false, false, null]
+	],
+	"dp": [
+		["dps1", null, false, "human", "float", null, null, null, null, null],
+		["dps2", "dps1", true, "human", "float", null, null, 5, null, null],
+		["dps3", "dps1", true, "human", "float", 10, null, 10, null, null]
+	]
+}

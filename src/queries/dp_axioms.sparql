@@ -1,0 +1,21 @@
+# body for query that extracts info for structurally matching dps
+
+SELECT DISTINCT ?dp ?domain ?range ?minex ?minin ?maxex ?maxin ?functional ?equivalent ?parent ?disjoint WHERE 
+{
+    ?dp a owl:DatatypeProperty . 
+    OPTIONAL { ?dp rdfs:domain ?domain . }
+    OPTIONAL { 
+        ?dp rdfs:range ?range . 
+        FILTER NOT EXISTS { ?range owl:onDatatype ?dt . }
+    }
+    OPTIONAL { ?dp rdfs:range/owl:onDatatype ?range . }
+    OPTIONAL { ?dp rdfs:range/owl:withRestrictions/rdf:rest*/rdf:first/xsd:minExclusive ?minex . }
+    OPTIONAL { ?dp rdfs:range/owl:withRestrictions/rdf:rest*/rdf:first/xsd:minInclusive ?minin . }
+    OPTIONAL { ?dp rdfs:range/owl:withRestrictions/rdf:rest*/rdf:first/xsd:maxExclusive ?maxex . }
+    OPTIONAL { ?dp rdfs:range/owl:withRestrictions/rdf:rest*/rdf:first/xsd:maxInclusive ?maxin . }
+    OPTIONAL { ?dp a owl:FunctionalProperty . BIND ( TRUE AS ?functional ) }
+    OPTIONAL { ?dp owl:equivalentProperty ?equivalent . }
+    OPTIONAL { ?dp rdfs:subPropertyOf ?parent . }
+    OPTIONAL { ?dp owl:propertyDisjointWith ?disjoint . }
+}
+ORDER BY ?dp

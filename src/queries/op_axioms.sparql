@@ -1,0 +1,34 @@
+# body for query that extracts info for structurally matching ops
+
+SELECT DISTINCT ?op ?domain ?range ?functional ?inversefunctional ?symmetric ?asymmetric ?transitive 
+?reflexive ?irreflexive ?parent ?inverseparent ?equivalent ?inverse ?disjoint ?propchain WHERE 
+{
+    ?op a owl:ObjectProperty . 
+    OPTIONAL { ?op rdfs:domain ?domain . }
+    OPTIONAL { ?op rdfs:range ?range . }
+    # properties
+# NOTE: more elegant, but currently unsupported expression
+#    BIND ( EXISTS { ?op a owl:FunctionalProperty } AS ?functional )
+    OPTIONAL { ?op a owl:FunctionalProperty .  BIND ( TRUE AS ?functional ) }
+    OPTIONAL { ?op a owl:InverseFunctionalProperty .  BIND ( TRUE AS ?inversefunctional ) }
+    OPTIONAL { ?op a owl:SymmetricProperty .  BIND ( TRUE AS ?symmetric ) }
+    OPTIONAL { ?op a owl:AsymmetricProperty .  BIND ( TRUE AS ?asymmetric ) }
+    OPTIONAL { ?op a owl:TransitiveProperty .  BIND ( TRUE AS ?transitive ) }
+    OPTIONAL { ?op a owl:ReflexiveProperty .  BIND ( TRUE AS ?reflexive ) }
+    OPTIONAL { ?op a owl:IrreflexiveProperty .  BIND ( TRUE AS ?irreflexive ) }
+    # additional info
+    OPTIONAL { 
+        ?op rdfs:subPropertyOf ?parent . 
+        FILTER NOT EXISTS { ?parent owl:inverseOf ?placeholder . }
+    }
+    OPTIONAL { ?op rdfs:subPropertyOf/owl:inverseOf ?inverseparent . }
+    OPTIONAL { 
+        ?op owl:equivalentProperty ?equivalent . 
+        FILTER NOT EXISTS { ?equivalent owl:inverseOf ?placeholder . }
+    }
+    OPTIONAL { ?op owl:equivalentProperty/owl:inverseOf ?inverse . }
+    OPTIONAL { ?op owl:inverseOf ?inverse . }
+    OPTIONAL { ?op owl:propertyDisjointWith ?disjoint . }
+    OPTIONAL { ?op owl:propertyChainAxiom/rdf:first*/rdf:rest*/rdf:first+ ?propchain . }
+}
+ORDER BY ?op

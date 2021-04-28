@@ -1,0 +1,126 @@
+# body for query that extracts info for structural matching
+# NOTE: this query assumes DNF of axioms
+# NOTE: currently unsupported features: disjoint union, general class axiom, target for key
+
+SELECT DISTINCT ?class ?eq ?rel ?p ?o ?minex ?minin ?maxex ?maxin WHERE 
+{
+    # get axiomatized classes
+    VALUES ?rel { owl:equivalentClass rdfs:subClassOf owl:disjointWith }
+    ?class ?rel ?eq . 
+    # ignore general class axioms
+    FILTER NOT EXISTS { ?class owl:intersectionOf ?x . }
+    FILTER NOT EXISTS { ?class owl:unionOf ?x . }
+    FILTER NOT EXISTS { ?class a owl:Restriction . }
+    # axiom consisting of single class or pred-obj triple
+    {
+        { 
+            ?eq a owl:Class . 
+            BIND( ?eq as ?o )
+        } UNION { 
+            ?eq a owl:Restriction ; 
+                owl:onProperty ?p . 
+            { 
+                ?eq owl:onClass ?o . 
+            } UNION { 
+                ?eq owl:someValuesFrom ?o . 
+                FILTER NOT EXISTS { ?o owl:onDatatype ?dt . }
+            } UNION {
+                ?eq owl:someValuesFrom/owl:onDatatype ?o . 
+                OPTIONAL { ?eq owl:someValuesFrom/owl:withRestrictions/rdf:first/xsd:minExclusive ?minex . }
+                OPTIONAL { ?eq owl:someValuesFrom/owl:withRestrictions/rdf:first/xsd:minInclusive ?minin . }
+                OPTIONAL { ?eq owl:someValuesFrom/owl:withRestrictions/rdf:rest/rdf:first/xsd:maxExclusive ?maxex . }
+                OPTIONAL { ?eq owl:someValuesFrom/owl:withRestrictions/rdf:rest/rdf:first/xsd:maxInclusive ?maxin . }
+            }
+        }
+        FILTER NOT EXISTS { ?eq owl:unionOf _:u . } 
+        FILTER NOT EXISTS { ?eq owl:intersectionOf _:i . } 
+    } 
+    UNION 
+    # axiom that is an intersection or union of at least two predicates and objects
+    {
+        {
+            ?eq owl:unionOf/rdf:rest*/rdf:first ?lvl1 . 
+            FILTER NOT EXISTS { ?lvl1 owl:unionOf _:uu . } 
+            FILTER NOT EXISTS { ?lvl1 owl:intersectionOf _:ui . } 
+        } UNION {
+            ?eq owl:intersectionOf/rdf:rest*/rdf:first ?lvl1 . 
+            FILTER NOT EXISTS { ?lvl1 owl:unionOf _:iu . } 
+            FILTER NOT EXISTS { ?lvl1 owl:intersectionOf _:ii . } 
+        }
+        OPTIONAL {
+            { 
+                ?lvl1 a owl:Class . 
+                BIND( ?lvl1 as ?o )
+            } UNION { 
+                ?lvl1 a owl:Restriction ; 
+                    owl:onProperty ?p . 
+                { 
+                    ?lvl1 owl:onClass ?o . 
+                } UNION { 
+                    ?lvl1 owl:someValuesFrom ?o . 
+                    FILTER NOT EXISTS { ?o owl:onDatatype ?dt . }
+                } UNION {
+                    ?lvl1 owl:someValuesFrom/owl:onDatatype ?o . 
+                    OPTIONAL { ?lvl1 owl:someValuesFrom/owl:withRestrictions/rdf:first/xsd:minExclusive ?minex . }
+                    OPTIONAL { ?lvl1 owl:someValuesFrom/owl:withRestrictions/rdf:first/xsd:minInclusive ?minin . }
+                    OPTIONAL { ?lvl1 owl:someValuesFrom/owl:withRestrictions/rdf:rest/rdf:first/xsd:maxExclusive ?maxex . }
+                    OPTIONAL { ?lvl1 owl:someValuesFrom/owl:withRestrictions/rdf:rest/rdf:first/xsd:maxInclusive ?maxin . }
+                }
+            }
+        }
+    }
+    UNION 
+    # axiom that is a nested intersection or union of at least two predicates and objects
+    {
+        # union of unions
+        {
+            ?eq owl:unionOf/rdf:rest*/rdf:first ?lvl1 . 
+            ?lvl1 owl:unionOf/rdf:rest*/rdf:first ?lvl2 . 
+            FILTER NOT EXISTS { ?lvl2 owl:unionOf _:uuu . } 
+            FILTER NOT EXISTS { ?lvl2 owl:intersectionOf _:uui . } 
+        } UNION 
+        # union of intersections (only relevant case if DNF assumption holds)
+        {
+            ?eq owl:unionOf/rdf:rest*/rdf:first ?lvl1 . 
+            ?lvl1 owl:intersectionOf/rdf:rest*/rdf:first ?lvl2 . 
+            FILTER NOT EXISTS { ?lvl2 owl:unionOf _:uiu . } 
+            FILTER NOT EXISTS { ?lvl2 owl:intersectionOf _:uii . } 
+        } UNION 
+        # intersection of unions
+        {
+            ?eq owl:intersectionOf/rdf:rest*/rdf:first ?lvl1 . 
+            ?lvl1 owl:unionOf/rdf:rest*/rdf:first ?lvl2 . 
+            FILTER NOT EXISTS { ?lvl2 owl:unionOf _:iuu . } 
+            FILTER NOT EXISTS { ?lvl2 owl:intersectionOf _:iui . } 
+        } UNION 
+        # intersection of intersections
+        {
+            ?eq owl:intersectionOf/rdf:rest*/rdf:first ?lvl1 . 
+            ?lvl1 owl:intersectionOf/rdf:rest*/rdf:first ?lvl2 . 
+            FILTER NOT EXISTS { ?lvl2 owl:unionOf _:iiu . } 
+            FILTER NOT EXISTS { ?lvl2 owl:intersectionOf _:iii . } 
+        } 
+        OPTIONAL {
+            { 
+                ?lvl2 a owl:Class . 
+                BIND( ?lvl2 as ?o )
+            } UNION { 
+                ?lvl2 a owl:Restriction ; 
+                    owl:onProperty ?p . 
+                { 
+                    ?lvl2 owl:onClass ?o . 
+                } UNION { 
+                    ?lvl2 owl:someValuesFrom ?o . 
+                    FILTER NOT EXISTS { ?o owl:onDatatype ?dt . }
+                } UNION {
+                    ?lvl2 owl:someValuesFrom/owl:onDatatype ?o . 
+                    OPTIONAL { ?lvl2 owl:someValuesFrom/owl:withRestrictions/rdf:first/xsd:minExclusive ?minex . }
+                    OPTIONAL { ?lvl2 owl:someValuesFrom/owl:withRestrictions/rdf:first/xsd:minInclusive ?minin . }
+                    OPTIONAL { ?lvl2 owl:someValuesFrom/owl:withRestrictions/rdf:rest/rdf:first/xsd:maxExclusive ?maxex . }
+                    OPTIONAL { ?lvl2 owl:someValuesFrom/owl:withRestrictions/rdf:rest/rdf:first/xsd:maxInclusive ?maxin . }
+                }
+            }
+        }
+    }
+}
+ORDER BY ?class ?eq ?p ?o

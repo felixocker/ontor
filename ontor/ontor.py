@@ -59,7 +59,7 @@ def load_json(json_file):
         data = json.load(f)
     return data
 
-class Onto_Manager:
+class Onto_Editor:
     """create, load, and edit ontologies"""
 
     def __init__(self, iri, path):

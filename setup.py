@@ -23,6 +23,6 @@ setuptools.setup(
     ],
     package_dir={"": "ontor"},
     packages=setuptools.find_packages(where="ontor"),
-    python_requires=">=3.9",
+    python_requires=">=3.8",
 )
 

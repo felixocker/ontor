@@ -2,7 +2,6 @@ certifi==2020.12.5
 chardet==4.0.0
 idna==2.10
 isodate==0.6.0
--e git+git@github.com:felixocker/ontor.git@58ffdbcf8beaf4ecc2d4b77d7eb1ef3b1cbf0f78#egg=ontor
 Owlready2==0.30
 pyparsing==2.4.7
 rdflib==5.0.0

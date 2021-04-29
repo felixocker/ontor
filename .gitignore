@@ -1,6 +1,7 @@
 # dirs
-.venv
+.venv/
 __pycache__/
+*.egg-info/
 
 # file types
 *.owl

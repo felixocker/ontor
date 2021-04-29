@@ -3,6 +3,7 @@
 
 import csv
 import datetime
+import importlib.resources as pkg_resources
 import json
 import logging
 import os
@@ -19,6 +20,7 @@ from owlready2 import destroy_entity, get_ontology, types, Thing, Nothing,\
                       ReflexiveProperty, IrreflexiveProperty, World, default_world,\
                       Restriction, SOME, ONLY, VALUE, MIN, MAX, EXACTLY,\
                       ConstrainedDatatype, sync_reasoner_hermit, sync_reasoner_pellet
+import queries
 
 logger = logging.getLogger(__name__)
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -69,7 +71,7 @@ class Onto_Editor:
         self.iri = iri
         self.path = path
         self.filename = path.split(sep="/")[-1]
-        self.query_prefixes = "./queries/prefixes.sparql"
+        self.query_prefixes = pkg_resources.read_text(queries, 'prefixes.sparql')
         try:
             self.onto = get_ontology(self.path).load()
             logger.info("successfully loaded ontology specified")
@@ -113,10 +115,10 @@ class Onto_Editor:
 
     def build_query(self, body):
         """concatenate prefixes and body"""
-        gp = open(self.query_prefixes, "r")
+        gp = self.query_prefixes
         sp = "PREFIX : <" + self.iri + "#>"
-        b = open(body, "r")
-        return gp.read() + sp + "\n\n" + b.read()
+        b = body
+        return gp + sp + "\n\n" + b
 
     def query_onto(self, query):
         """query onto and return results as list"""
@@ -127,10 +129,11 @@ class Onto_Editor:
 
     def get_axioms(self):
         """get all class, op, and dp axioms"""
-        class_axioms = self.query_onto(self.build_query("./queries/class_axioms.sparql"))
-        op_axioms = self.query_onto(self.build_query("./queries/op_axioms.sparql"))
-        dp_axioms = self.query_onto(self.build_query("./queries/dp_axioms.sparql"))
-        return [class_axioms, op_axioms, dp_axioms]
+        axioms = []
+        for body in ['class_axioms.sparql', 'op_axioms.sparql', 'dp_axioms.sparql']:
+            query_ax = pkg_resources.read_text(queries, body)
+            axioms.append(self.query_onto(self.build_query(query_ax)))
+        return axioms
 
     def add_axioms(self, axiom_tuples):
         """

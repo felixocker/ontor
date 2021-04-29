@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 """minimal example for applying the ontor module"""
 
-import os
-import sys
-sys.path.insert(0, os.path.abspath('..'))
-
-from ontor import ontor
+import ontor
 
 def create_first_onto():
     iri = "http://example.org/onto-ex.owl"
@@ -50,9 +46,9 @@ def modify_onto():
     my_ontor.add_instances(ins)
     print([elem for elem in my_ontor.get_elems()[0]])
     my_ontor.add_axioms(ontor.load_csv("./data/class_axioms.csv"))
-    # print(*my_ontor.get_axioms()[0], sep="\n")
-    # print("inconsistent classes")
-    # print(my_ontor.reasoning("hermit", False))
+    print(*my_ontor.get_axioms()[0], sep="\n")
+    print("inconsistent classes")
+    print(my_ontor.reasoning("hermit", False))
     my_ontor.debug_onto()
 
 # removing restrictions
@@ -72,11 +68,11 @@ def modify_onto():
 #    my_ontor.remove_elements(["owns"])
 #    print([elem for elem in my_ontor.get_elems()[1]])
 
-    # print(my_ontor.get_axioms())
-    # my_ontor.add_import("file://./onto-ex-add.owl")
-    # my_ontor.save_as("test.owl")
+    print(my_ontor.get_axioms())
+    my_ontor.add_import("file://./onto-ex-add.owl")
+    my_ontor.save_as("test.owl")
 
 if __name__ == "__main__":
     create_first_onto()
-    # create_second_onto()
+    create_second_onto()
     modify_onto()

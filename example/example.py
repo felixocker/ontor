@@ -14,7 +14,7 @@ def create_first_onto():
     ins = [["felix", "human", None, None],\
            ["x1", "computer", None, None],\
            ["felix", "human", "owns", "x1"]]
-    ontor1 = ontor.Onto_Editor(iri, fname)
+    ontor1 = ontor.OntoEditor(iri, fname)
     ontor1.add_axioms(classes)
     ontor1.add_ops(ops)
     ontor1.add_dps(dps)
@@ -25,7 +25,7 @@ def create_second_onto():
     iri = "http://example.org/onto-ex-add.owl"
     fname = "./onto-ex-add.owl"
     classes = [["tablet", None, None, None, None, None, None]]
-    ontor2 = ontor.Onto_Editor(iri, fname)
+    ontor2 = ontor.OntoEditor(iri, fname)
     ontor2.add_axioms(classes)
 
 def modify_onto():
@@ -36,15 +36,15 @@ def modify_onto():
            ["ti2", None, None, None],\
            ["x1", "computer", "clock_rate", 3],\
            ["x1", "computer", "owns", "x1"]]
-    my_ontor = ontor.Onto_Editor("http://example.org/onto-ex.owl", "file://./onto-ex.owl")
+    my_ontor = ontor.OntoEditor("http://example.org/onto-ex.owl", "file://./onto-ex.owl")
     my_ontor.add_axioms(classes)
-    print([elem for elem in my_ontor.get_elems()[0]])
+    print(list(elem for elem in my_ontor.get_elems()[0]))
     my_ontor.add_ops(ontor.load_json("./data/props.json")["op"])
-    print([elem for elem in my_ontor.get_elems()[0]])
+    print(list(elem for elem in my_ontor.get_elems()[0]))
     my_ontor.add_dps(ontor.load_json("./data/props.json")["dp"])
-    print([elem for elem in my_ontor.get_elems()[0]])
+    print(list(elem for elem in my_ontor.get_elems()[0]))
     my_ontor.add_instances(ins)
-    print([elem for elem in my_ontor.get_elems()[0]])
+    print(list(elem for elem in my_ontor.get_elems()[0]))
     my_ontor.add_axioms(ontor.load_csv("./data/class_axioms.csv"))
     print(*my_ontor.get_axioms()[0], sep="\n")
     print("inconsistent classes")
@@ -58,7 +58,8 @@ def modify_onto():
     # my_ontor.remove_from_taxo(["test"])
     # print(my_ontor.get_class_restrictions("test2"))
 
-# BUG: if disjoints are added before removal there is an attribute error - seemingly independent of whether prop is mentioned in disjoints
+# BUG: if disjoints are added before removal there is an attribute error
+# BUG: seemingly independent of whether prop is mentioned in disjoints
 #    my_ontor.add_distinctions([["classes", ["ops1", "ops2", "ops3"]],\
 #                         ["classes", ["human", "computer"]],\
 #                         ["instances", ["felix", "x1"]]])

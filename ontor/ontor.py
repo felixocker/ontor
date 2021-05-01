@@ -14,12 +14,11 @@ from contextlib import contextmanager
 from datetime import datetime
 from io import StringIO
 from owlready2 import destroy_entity, get_ontology, types, Thing, Nothing,\
-                      AllDisjoint, AllDifferent, DataProperty, IRIS, ObjectProperty,\
+                      AllDisjoint, AllDifferent, DataProperty, ObjectProperty,\
                       FunctionalProperty, InverseFunctionalProperty,\
                       TransitiveProperty, SymmetricProperty, AsymmetricProperty,\
                       ReflexiveProperty, IrreflexiveProperty, World, default_world,\
-                      Restriction, SOME, ONLY, VALUE, MIN, MAX, EXACTLY,\
-                      ConstrainedDatatype, sync_reasoner_hermit, sync_reasoner_pellet
+                      Restriction, ConstrainedDatatype, sync_reasoner_hermit, sync_reasoner_pellet
 import queries
 
 logger = logging.getLogger(__name__)
@@ -61,7 +60,7 @@ def load_json(json_file):
         data = json.load(f)
     return data
 
-class Onto_Editor:
+class OntoEditor:
     """create, load, and edit ontologies"""
 
     def __init__(self, iri, path):
@@ -157,7 +156,7 @@ class Onto_Editor:
                     logger.warning(f"no class defined: {axiom}")
                 if not axiom[2] and not axiom[3] and not axiom[4] and not axiom[5]:
                     continue
-                elif axiom[2] and axiom[3] and axiom[5]:
+                if axiom[2] and axiom[3] and axiom[5]:
                     if axiom[-1]:
                         lst = my_class.equivalent_to
                     else:
@@ -180,7 +179,7 @@ class Onto_Editor:
     def add_ops(self, op_tuples):
         """
         add op axioms
-        accepted input tuples have the form [op, super-op, domain, range, functional, 
+        accepted input tuples have the form [op, super-op, domain, range, functional,
         inverse functional, transitive, symmetric, asymmetric, reflexive, irreflexive,
         inverse_prop]
         note that only one inverse_prop can be processed due to owlready2 limitations
@@ -207,7 +206,7 @@ class Onto_Editor:
     def add_dps(self, dp_tuples):
         """
         add dp axioms
-        accepted input tuples have the form 
+        accepted input tuples have the following form
         [dp, super-dp, functional, domain, range, min-ex, min-in, exact, max-ex, max-in]
         """
         datatype = {"float": float,
@@ -233,19 +232,19 @@ class Onto_Editor:
                 elif dp[4] and dp[7] and not any(dp[5:7] + dp[8:]):
                     my_dp.range = [ConstrainedDatatype(datatype[dp[4]], min_inclusive=dp[7], max_inclusive=dp[7])]
                 elif dp[4] and dp[5] and dp[8] and not any(dp[6:8] + dp[9]):
-                    my_dp.range = [ConstrainedDatatype(ddatatype[dp[4]], min_exclusive=dp[5], max_exclusive=dp[8])]
+                    my_dp.range = [ConstrainedDatatype(datatype[dp[4]], min_exclusive=dp[5], max_exclusive=dp[8])]
                 elif dp[4] and dp[5] and dp[9] and not any(dp[6:9]):
                     my_dp.range = [ConstrainedDatatype(datatype[dp[4]], min_exclusive=dp[5], max_inclusive=dp[9])]
                 elif dp[4] and dp[6] and dp[8] and not any(dp[5] + dp[7] + dp[9]):
                     my_dp.range = [ConstrainedDatatype(datatype[dp[4]], min_inclusive=dp[6], max_exclusive=dp[8])]
                 elif dp[4] and dp[6] and dp[9] and not any(dp[5] + dp[7:9]):
-                    my_dp.range = [ConstrainedDatatype(ddatatype[dp[4]], min_inclusive=dp[6], max_inclusive=dp[9])]
+                    my_dp.range = [ConstrainedDatatype(datatype[dp[4]], min_inclusive=dp[6], max_inclusive=dp[9])]
                 elif dp[4] and dp[5] and not any(dp[6:]):
                     my_dp.range = [ConstrainedDatatype(datatype[dp[4]], min_exclusive=dp[5])]
                 elif dp[4] and dp[6] and not any(dp[5] + dp[7]):
                     my_dp.range = [ConstrainedDatatype(datatype[dp[4]], min_inclusive=dp[6])]
                 elif dp[4] and dp[8] and not any(dp[5:8] + dp[9]):
-                    my_dp.range = [ConstrainedDatatype(ddatatype[dp[4]], max_exclusive=dp[8])]
+                    my_dp.range = [ConstrainedDatatype(datatype[dp[4]], max_exclusive=dp[8])]
                 elif dp[4] and dp[9] and not any(dp[5:9]):
                     my_dp.range = [ConstrainedDatatype(datatype[dp[4]], max_inclusive=dp[9])]
                 else:
@@ -266,7 +265,7 @@ class Onto_Editor:
                 if not inst[2] and not inst[3]:
                     continue
 # TODO: handle datatypes correctly for DPs
-                elif inst[2] and inst[3]:
+                if inst[2] and inst[3]:
                     if DataProperty in self.onto[inst[2]].is_a:
                         val = inst[3]
                     elif ObjectProperty in self.onto[inst[2]].is_a:
@@ -355,7 +354,7 @@ class Onto_Editor:
             for lst in self.onto[class_name].is_a, self.onto[class_name].equivalent_to:
                 self.remove_restr_from_class_def(lst)
         self.onto.save(file = self.filename)
-    
+
     def remove_restrictions_including_prop(self, prop_name):
         with self.onto:
             for c in self.onto.classes():
@@ -391,14 +390,16 @@ class Onto_Editor:
                 logger.exception(repr(exc))
 # TODO: indent traceback - use traceback module if necessary
             inconsistent_classes = list(inf_onto.inconsistent_classes())
-        if save and not inconsistent_classes:
-# TODO: test this - does reload work as expected?
-            inf_onto.save(file = self.filename)
-            self.reload_from_file()
-        elif inconsistent_classes:
+        if inconsistent_classes:
             logger.warning(f"the ontology is inconsistent: {inconsistent_classes}")
             inconsistent_classes.remove(Nothing)
             return inconsistent_classes
+        elif save and not inconsistent_classes:
+# TODO: test this - does reload work as expected?
+            inf_onto.save(file = self.filename)
+            self.reload_from_file()
+        return None
+        
 
     @staticmethod
     def check_reasoner(reasoner):
@@ -424,6 +425,7 @@ class Onto_Editor:
             rel_types = ["is_a", "equivalent_to"]
             pot_probl_ax = {"is_a": self.get_incon_class_res("is_a", inconsistent_classes),
                             "equivalent_to": self.get_incon_class_res("equivalent_to", inconsistent_classes)}
+# BUG: there is a bug when the explanation is run: "Attribute Error: NoneType has no attribute equivalent_to"
             for rel in rel_types:
                 for count, ic in enumerate(inconsistent_classes):
                     for ax in pot_probl_ax[rel][count]:
@@ -449,6 +451,6 @@ class Onto_Editor:
             user_input = input()
         if user_input in ["y", "n"]:
             return answer[user_input]
-        elif user_input == "q":
+        if user_input == "q":
             print("quitting - process needs to be restarted")
             sys.exit(0)

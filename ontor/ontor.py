@@ -264,7 +264,9 @@ class OntoEditor:
                     logger.warning(f"unexpected instance info: {inst}")
                 if not inst[2] and not inst[3]:
                     continue
-# TODO: handle datatypes correctly for DPs
+# TODO: handle datatypes correctly for DPs, depending on range of dp?
+# simply add another optional element to list so that datatype may be specified
+# owlready support for: int, float, bool, string, date, time, datetime, locstring (incl lang)
                 if inst[2] and inst[3]:
                     if DataProperty in self.onto[inst[2]].is_a:
                         val = inst[3]
@@ -381,10 +383,11 @@ class OntoEditor:
             self.check_reasoner(reasoner)
             try:
                 with redirect_to_log():
+# TODO: consider allowing user to specify several ontos to be checked together - does the current implementation work with imports?
                     if reasoner == "hermit":
-                        sync_reasoner_hermit()
+                        sync_reasoner_hermit([inf_onto])
                     elif reasoner == "pellet":
-                        sync_reasoner_pellet(infer_property_values=True, infer_data_property_values=True)
+                        sync_reasoner_pellet([inf_onto], infer_property_values=True, infer_data_property_values=True)
             except Exception as exc:
                 print("There was a more complex issue - check log")
                 logger.exception(repr(exc))
@@ -395,11 +398,9 @@ class OntoEditor:
             inconsistent_classes.remove(Nothing)
             return inconsistent_classes
         elif save and not inconsistent_classes:
-# TODO: test this - does reload work as expected?
             inf_onto.save(file = self.filename)
             self.reload_from_file()
         return None
-        
 
     @staticmethod
     def check_reasoner(reasoner):

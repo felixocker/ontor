@@ -377,13 +377,13 @@ class OntoEditor:
     def reasoning(self, reasoner="hermit", save=False):
         """reasoner-based inferences; saves to file"""
         # add temporary world for inferences
+# TODO: test with imports
         inferences = World()
         inf_onto = inferences.get_ontology(self.path).load()
         with inf_onto:
             self.check_reasoner(reasoner)
             try:
                 with redirect_to_log():
-# TODO: consider allowing user to specify several ontos to be checked together - does the current implementation work with imports?
                     if reasoner == "hermit":
                         sync_reasoner_hermit([inf_onto])
                     elif reasoner == "pellet":
@@ -420,18 +420,17 @@ class OntoEditor:
                 debug = World()
                 debug_onto = debug.get_ontology(self.path).load()
                 with debug_onto:
-                    # NOTE: pellet explain support somewhat buggy in Owlready2
-                    sync_reasoner_pellet(infer_property_values=True, infer_data_property_values=True, debug=2)
-                    # IDEA: analyze reasoner results to pin down cause of inconsistency
+                    sync_reasoner_pellet([debug_onto], infer_property_values=True, infer_data_property_values=True, debug=2)
+                    # IDEA: further analyze reasoner results to pin down cause of inconsistency
             rel_types = ["is_a", "equivalent_to"]
             pot_probl_ax = {"is_a": self.get_incon_class_res("is_a", inconsistent_classes),
                             "equivalent_to": self.get_incon_class_res("equivalent_to", inconsistent_classes)}
-# BUG: there is a bug when the explanation is run: "Attribute Error: NoneType has no attribute equivalent_to"
             for rel in rel_types:
                 for count, ic in enumerate(inconsistent_classes):
                     for ax in pot_probl_ax[rel][count]:
                         if self.bool_user_interaction("Delete " + rel + " axiom?", ax_msg + str(ax)):
                             getattr(self.onto[ic.name], rel).remove(ax)
+                            # IDEA: instead of simply deleting axioms, also allow user to edit them
             self.onto.save(file = self.filename)
             self.debug_onto(reasoner)
 

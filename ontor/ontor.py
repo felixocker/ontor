@@ -97,14 +97,16 @@ class OntoEditor:
     def save_as(self, new_name):
         """
         safe ontology as new file
-        helpful, eg, if multiple ontos were loaded
+        helpful, e.g., if multiple ontos were loaded
         """
         self.onto.save(file = new_name)
         self.filename = new_name
         self.path = "file://./" + new_name
 
     def get_elems(self):
-        """get nodes and edges from onto"""
+        """
+        :return: nodes and edges from onto
+        """
         with self.onto:
             cl = self.onto.classes()
             ops = self.onto.object_properties()
@@ -113,21 +115,29 @@ class OntoEditor:
         return [cl, ops, dps, ins]
 
     def build_query(self, body):
-        """concatenate prefixes and body"""
+        """
+        :param body: body of the SPARQL query, without prefixes
+        :return: complete SPARQL query consisting of prefixes and body
+        """
         gp = self.query_prefixes
         sp = "PREFIX : <" + self.iri + "#>"
         b = body
         return gp + sp + "\n\n" + b
 
     def query_onto(self, query):
-        """query onto and return results as list"""
+        """
+        :param query: SPARQL query
+        :return: query results as list
+        """
         # NOTE: use of query_owlready messes up ranges of dps
         with self.onto:
             graph = default_world.as_rdflib_graph()
             return list(graph.query(query))
 
     def get_axioms(self):
-        """get all class, op, and dp axioms"""
+        """
+        :return: list of class, op, and dp axioms
+        """
         axioms = []
         for body in ['class_axioms.sparql', 'op_axioms.sparql', 'dp_axioms.sparql']:
             query_ax = pkg_resources.read_text(queries, body)
@@ -136,8 +146,7 @@ class OntoEditor:
 
     def add_axioms(self, axiom_tuples):
         """
-        add axioms
-        accepted input tuples have the form [class, superclass, property,
+        :param axiom_tuples: list of tuples of the form [class, superclass, property,
         cardinality type, cardinality, object, equivalence(bool)]
         """
         # NOTE: only one axiom may be specified at once
@@ -169,6 +178,13 @@ class OntoEditor:
 
     @staticmethod
     def add_restr_to_class_def(lst, prop, p_type, cardin, obj, axiom):
+        """
+        :param lst: list of an element's axioms - equivalent_to or is_a
+        :param prop: object property
+        :param p_type: property restriction type
+        :param cardin: cardinality
+        :param obj: object
+        """
         if p_type in ["some", "only", "value"] and not cardin:
             lst.append(getattr(prop, p_type)(obj))
         elif p_type in ["exactly", "max", "min"] and cardin:
@@ -178,11 +194,10 @@ class OntoEditor:
 
     def add_ops(self, op_tuples):
         """
-        add op axioms
-        accepted input tuples have the form [op, super-op, domain, range, functional,
-        inverse functional, transitive, symmetric, asymmetric, reflexive, irreflexive,
-        inverse_prop]
-        note that only one inverse_prop can be processed due to owlready2 limitations
+        :param op_tuples: list of tuples of the form [op, super-op, domain, range,
+        functional, inverse functional, transitive, symmetric, asymmetric, reflexive,
+        irreflexive, inverse_prop]
+        NOTE: only one inverse_prop can be processed per tuple
         """
         with self.onto:
             for op in op_tuples:
@@ -205,8 +220,7 @@ class OntoEditor:
 
     def add_dps(self, dp_tuples):
         """
-        add dp axioms
-        accepted input tuples have the following form
+        :param dp_tuples: list of input tuples of the form
         [dp, super-dp, functional, domain, range, min-ex, min-in, exact, max-ex, max-in]
         """
         datatype = {"float": float,
@@ -253,8 +267,7 @@ class OntoEditor:
 
     def add_instances(self, instance_tuples):
         """
-        add instances and their relations
-        accepted input tuples have the form [instance, class, property, range]
+        :param instance_tuples: list of tuples of the form [instance, class, property, range]
         """
         with self.onto:
             for inst in instance_tuples:
@@ -277,11 +290,11 @@ class OntoEditor:
                     logger.warning(f"unexpected triple: {inst}")
         self.onto.save(file = self.filename)
 
-    def add_instance_relation(self, my_instance, rel, val):
-        if FunctionalProperty in self.onto[rel].is_a:
-            setattr(my_instance, rel, val)
+    def add_instance_relation(self, subj, pred, obj):
+        if FunctionalProperty in self.onto[pred].is_a:
+            setattr(subj, pred, obj)
         else:
-            getattr(my_instance, rel).append(val)
+            getattr(subj, pred).append(obj)
 
     def add_distinctions(self, distinct_sets):
         """
@@ -318,7 +331,7 @@ class OntoEditor:
         """
         remove a class from the taxonomy, but keep all subclasses and instances
         by relating them to parent
-        reassign: add all restrictions to subclasses via is_a
+        :param reassign: add all restrictions to subclasses via is_a
         NOTE: elem is not replaced in axioms bc this may be semantically incorrect
         """
 # BUG: after reasoning issue with equivalent Restrictions (which are referenced multiple times)
@@ -341,6 +354,9 @@ class OntoEditor:
         self.onto.save(file = self.filename)
 
     def get_class_restrictions(self, class_name, res_type="is_a"):
+        """
+        :param res_type: restriction type, either is_a or equivalent_to
+        """
         with self.onto:
             if res_type == "is_a":
                 elems = self.onto[class_name].is_a
@@ -368,14 +384,18 @@ class OntoEditor:
     def remove_restr_from_class_def(lst, prop=None):
         """
         remove all restricitons from list
-        optionally limited to those including a certain property
+        :param prop: optional; limits results to restrictions including a certain property
         """
         for r in [r for r in lst if isinstance(r, Restriction)]:
             if not prop or prop and r.property == prop:
                 lst.remove(r)
 
     def reasoning(self, reasoner="hermit", save=False):
-        """reasoner-based inferences; saves to file"""
+        """
+        :param reasoner: reasoner can be eiter hermit or pellet
+        :param save: bool - save inferences into original file
+        :return: returns inconsistent classes, if there are any
+        """
         # add temporary world for inferences
 # TODO: test with imports
         inferences = World()
@@ -409,7 +429,10 @@ class OntoEditor:
             logger.warning(f"unexpected reasoner: {reasoner} - available reasoners: {reasoners}")
 
     def debug_onto(self, reasoner="hermit"):
-        """interactively (CLI) fix inconsistencies"""
+        """
+        interactively (CLI) fix inconsistencies
+        :param reasoner: reasoner can be eiter hermit or pellet
+        """
         ax_msg = "Potentially inconsistent axiom: "
         inconsistent_classes = self.reasoning(reasoner=reasoner, save=False)
         if not inconsistent_classes:
@@ -435,11 +458,14 @@ class OntoEditor:
             self.debug_onto(reasoner)
 
     def get_incon_class_res(self, rel, inconsistent_classes):
+        """
+        :return: class restrictions for inconsistent_classes - does not return parent classes
+        """
         return [self.get_class_restrictions(ic.name, rel) for ic in inconsistent_classes]
 
     @staticmethod
     def bool_user_interaction(question, info=None):
-        """CLI for choosing wich axioms to remove"""
+        """simple CLI for yes/ no/ quit interaction"""
         answer = {"y": True,
                   "n": False}
         if info:

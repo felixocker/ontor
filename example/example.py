@@ -34,46 +34,56 @@ def modify_onto():
                ["test2", "test", None, None, None, None, False]]
     ins = [["testinstance", "human", "owns", "x1"],\
            ["ti2", None, None, None],\
-           ["x1", "computer", "clock_rate", 3],\
+           ["x1", "computer", "clock_rate", 3.1],\
            ["x1", "computer", "owns", "x1"]]
-    my_ontor = ontor.OntoEditor("http://example.org/onto-ex.owl", "file://./onto-ex.owl")
-    my_ontor.add_axioms(classes)
-    print(list(elem for elem in my_ontor.get_elems()[0]))
-    my_ontor.add_ops(ontor.load_json("./data/props.json")["op"])
-    print(list(elem for elem in my_ontor.get_elems()[0]))
-    my_ontor.add_dps(ontor.load_json("./data/props.json")["dp"])
-    print(list(elem for elem in my_ontor.get_elems()[0]))
-    my_ontor.add_instances(ins)
-    print(list(elem for elem in my_ontor.get_elems()[0]))
-    my_ontor.add_axioms(ontor.load_csv("./data/class_axioms.csv"))
-    print(*my_ontor.get_axioms()[0], sep="\n")
+    ontor3 = ontor.OntoEditor("http://example.org/onto-ex.owl", "./onto-ex.owl")
+    ontor3.add_axioms(classes)
+    print(list(elem for elem in ontor3.get_elems()[0]))
+    ontor3.add_ops(ontor.load_json("./data/props.json")["op"])
+    print(list(elem for elem in ontor3.get_elems()[0]))
+    ontor3.add_dps(ontor.load_json("./data/props.json")["dp"])
+    print(list(elem for elem in ontor3.get_elems()[0]))
+    ontor3.add_instances(ins)
+    print(list(elem for elem in ontor3.get_elems()[0]))
+    ontor3.add_axioms(ontor.load_csv("./data/class_axioms.csv"))
+    print(*ontor3.get_axioms()[0], sep="\n")
+# TODO: double check this
+
+    print(ontor3.get_axioms())
+    ontor3.add_import("file://./onto-ex-add.owl")
+    ontor3.save_as("test.owl")
+
+#    ontor3.remove_restrictions_on_class("test2")
+
     print("inconsistent classes")
-    print(my_ontor.reasoning("hermit", False))
-    my_ontor.debug_onto()
+    print(ontor3.reasoning("hermit", False))
+    print("debugging")
+    ontor3.debug_onto()
 
 # removing restrictions
-    # print(my_ontor.get_class_restrictions("test2"))
-    # my_ontor.remove_restrictions_including_prop("owns")
-    # my_ontor.remove_restrictions_on_class("test")
-    # my_ontor.remove_from_taxo(["test"])
-    # print(my_ontor.get_class_restrictions("test2"))
+    print(ontor3.get_class_restrictions("test2"))
+    ontor3.remove_restrictions_including_prop("owns")
+    ontor3.remove_restrictions_on_class("test")
+    ontor3.remove_from_taxo(["test"])
+    print(ontor3.get_class_restrictions("test2"))
 
 # BUG: if disjoints are added before removal there is an attribute error
 # BUG: seemingly independent of whether prop is mentioned in disjoints
-#    my_ontor.add_distinctions([["classes", ["ops1", "ops2", "ops3"]],\
+#    ontor3.add_distinctions([["classes", ["ops1", "ops2", "ops3"]],\
 #                         ["classes", ["human", "computer"]],\
 #                         ["instances", ["felix", "x1"]]])
 
 # removing entities
-#    print([elem for elem in my_ontor.get_elems()[1]])
-#    my_ontor.remove_elements(["owns"])
-#    print([elem for elem in my_ontor.get_elems()[1]])
+#    print([elem for elem in ontor3.get_elems()[1]])
+#    ontor3.remove_elements(["owns"])
+#    print([elem for elem in ontor3.get_elems()[1]])
 
-    print(my_ontor.get_axioms())
-    my_ontor.add_import("file://./onto-ex-add.owl")
-    my_ontor.save_as("test.owl")
+def check_import():
+    ontor4 = ontor.OntoEditor("http://example.org/onto-ex.owl", "./onto-ex.owl", ["."])
+    print(ontor4.onto.imported_ontologies)
 
 if __name__ == "__main__":
     create_first_onto()
     create_second_onto()
     modify_onto()
+    check_import()

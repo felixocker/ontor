@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ontology management module"""
+"""ONTology editOR (ontor) module"""
 
 import csv
 import datetime
@@ -18,7 +18,8 @@ from owlready2 import destroy_entity, get_ontology, types, Thing, Nothing,\
                       FunctionalProperty, InverseFunctionalProperty,\
                       TransitiveProperty, SymmetricProperty, AsymmetricProperty,\
                       ReflexiveProperty, IrreflexiveProperty, World, default_world,\
-                      Restriction, ConstrainedDatatype, sync_reasoner_hermit, sync_reasoner_pellet
+                      Restriction, ConstrainedDatatype, sync_reasoner_hermit, sync_reasoner_pellet,\
+                      onto_path
 import queries
 
 logger = logging.getLogger(__name__)
@@ -63,14 +64,19 @@ def load_json(json_file):
 class OntoEditor:
     """create, load, and edit ontologies"""
 
-    def __init__(self, iri, path):
+    def __init__(self, iri, path, import_paths=None):
         """
         tries to load onto from file specified, creates new file if none is available
+        :param iri: ontology's IRI
+        :param path: path to local ontology file or URL; local is checked first
+        :param import_paths: list of local directories to be checked for imports
         """
         self.iri = iri
         self.path = path
         self.filename = path.split(sep="/")[-1]
         self.query_prefixes = pkg_resources.read_text(queries, 'prefixes.sparql')
+        if import_paths:
+            onto_path.extend(import_paths)
         try:
             self.onto = get_ontology(self.path).load()
             logger.info("successfully loaded ontology specified")
@@ -89,6 +95,8 @@ class OntoEditor:
 
     def add_import(self, other_path):
         """load an additional onto"""
+        if "file://" in other_path:
+            onto_path.append(other_path.rsplit("/", 1)[0].removeprefix("file://"))
         onto_import = get_ontology(other_path).load()
         with self.onto:
             self.onto.imported_ontologies.append(onto_import)
@@ -334,7 +342,6 @@ class OntoEditor:
         :param reassign: add all restrictions to subclasses via is_a
         NOTE: elem is not replaced in axioms bc this may be semantically incorrect
         """
-# BUG: after reasoning issue with equivalent Restrictions (which are referenced multiple times)
         with self.onto:
             for elem in elem_list:
                 parents = list(set(self.onto[elem].ancestors()).intersection(self.onto[elem].is_a))
@@ -397,7 +404,6 @@ class OntoEditor:
         :return: returns inconsistent classes, if there are any
         """
         # add temporary world for inferences
-# TODO: test with imports
         inferences = World()
         inf_onto = inferences.get_ontology(self.path).load()
         with inf_onto:

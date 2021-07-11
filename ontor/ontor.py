@@ -307,6 +307,7 @@ class OntoEditor:
     def add_distinctions(self, distinct_sets):
         """
         add sets of disjoint/ different elements
+        NOTE: distinctions may lead to inconsistencies reasoners cannot handle
         """
         funcs = {"classes": AllDisjoint,
                  "instances": AllDifferent}
@@ -405,17 +406,18 @@ class OntoEditor:
         """
         # add temporary world for inferences
         inferences = World()
+        self.check_reasoner(reasoner)
         inf_onto = inferences.get_ontology(self.path).load()
         with inf_onto:
-            self.check_reasoner(reasoner)
             try:
                 with redirect_to_log():
                     if reasoner == "hermit":
                         sync_reasoner_hermit([inf_onto])
                     elif reasoner == "pellet":
-                        sync_reasoner_pellet([inf_onto], infer_property_values=True, infer_data_property_values=True)
+                        sync_reasoner_pellet([inf_onto], infer_property_values=True,\
+                                             infer_data_property_values=True)
             except Exception as exc:
-                print("There was a more complex issue - check log")
+                print("There was a more complex issue, e.g., with disjoints - check log for traceback")
                 logger.exception(repr(exc))
 # TODO: indent traceback - use traceback module if necessary
             inconsistent_classes = list(inf_onto.inconsistent_classes())
@@ -440,6 +442,7 @@ class OntoEditor:
         :param reasoner: reasoner can be eiter hermit or pellet
         """
         ax_msg = "Potentially inconsistent axiom: "
+        self.check_reasoner(reasoner)
         inconsistent_classes = self.reasoning(reasoner=reasoner, save=False)
         if not inconsistent_classes:
             print("No inconsistencies detected.")
@@ -449,7 +452,8 @@ class OntoEditor:
                 debug = World()
                 debug_onto = debug.get_ontology(self.path).load()
                 with debug_onto:
-                    sync_reasoner_pellet([debug_onto], infer_property_values=True, infer_data_property_values=True, debug=2)
+                    sync_reasoner_pellet([debug_onto], infer_property_values=True,\
+                                         infer_data_property_values=True, debug=2)
                     # IDEA: further analyze reasoner results to pin down cause of inconsistency
             rel_types = ["is_a", "equivalent_to"]
             pot_probl_ax = {"is_a": self.get_incon_class_res("is_a", inconsistent_classes),

@@ -29,7 +29,10 @@ def create_second_onto():
     ontor2 = ontor.OntoEditor(iri, fname)
     ontor2.add_axioms(classes)
 
-def modify_onto():
+def modify_onto(break_by_disjoint=False):
+    """
+    :param break_by_disjoint: if True disjoints are added that the reasoner cannot handle
+    """
     classes = [["test", "human", None, None, None, None, None],\
                [None, None, None, None, None, None, None],\
                ["test2", "test", None, None, None, None, False]]
@@ -49,10 +52,12 @@ def modify_onto():
     ontor3.add_axioms(ontor.load_csv("./data/class_axioms.csv"))
     print(*ontor3.get_axioms()[0], sep="\n")
 
-    ontor3.add_distinctions([["classes", ["ops1", "ops2", "ops3"]],\
-                             ["classes", ["human", "computer"]],\
-                             ["classes", ["human", "process"]],\
-                             ["instances", ["felix", "x1"]]])
+    ontor3.add_distinctions([["classes", ["human", "process"]]])
+
+    if break_by_disjoint:
+        ontor3.add_distinctions([["classes", ["ops1", "ops2", "ops3"]],\
+                                 ["classes", ["human", "computer"]],\
+                                 ["instances", ["felix", "x1"]]])
 
     print(ontor3.get_axioms())
     ontor3.add_import("file://./onto-ex-add.owl")
@@ -79,6 +84,7 @@ def modify_onto():
 
 def check_import():
     ontor4 = ontor.OntoEditor("http://example.org/onto-ex.owl", "./onto-ex.owl", ["."])
+    print("Imports are:")
     print(ontor4.onto.imported_ontologies)
 
 if __name__ == "__main__":

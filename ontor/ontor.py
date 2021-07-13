@@ -10,6 +10,7 @@ import os
 import os.path
 import sys
 import textwrap
+import traceback
 from contextlib import contextmanager
 from datetime import datetime
 from io import StringIO
@@ -404,6 +405,7 @@ class OntoEditor:
         :param save: bool - save inferences into original file
         :return: returns inconsistent classes, if there are any
         """
+        inconsistent_classes = None
         # add temporary world for inferences
         inferences = World()
         self.check_reasoner(reasoner)
@@ -416,11 +418,10 @@ class OntoEditor:
                     elif reasoner == "pellet":
                         sync_reasoner_pellet([inf_onto], infer_property_values=True,\
                                              infer_data_property_values=True)
+                inconsistent_classes = list(inf_onto.inconsistent_classes())
             except Exception as exc:
                 print("There was a more complex issue, e.g., with disjoints - check log for traceback")
-                logger.exception(repr(exc))
-# TODO: indent traceback - use traceback module if necessary
-            inconsistent_classes = list(inf_onto.inconsistent_classes())
+                logger.error(repr(exc) + "\n" + indent_log(traceback.format_exc()))
         if inconsistent_classes:
             logger.warning(f"the ontology is inconsistent: {inconsistent_classes}")
             inconsistent_classes.remove(Nothing)

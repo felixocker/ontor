@@ -7,7 +7,6 @@ import importlib.resources as pkg_resources
 import json
 import logging
 import os
-import os.path
 import sys
 import textwrap
 import traceback
@@ -137,8 +136,8 @@ class OntoEditor:
         """
         :param query: SPARQL query
         :return: query results as list
-        """
         # NOTE: use of query_owlready messes up ranges of dps
+        """
         with self.onto:
             graph = default_world.as_rdflib_graph()
             return list(graph.query(query))
@@ -157,10 +156,10 @@ class OntoEditor:
         """
         :param axiom_tuples: list of tuples of the form [class, superclass, property,
         cardinality type, cardinality, object, equivalence(bool)]
-        """
         # NOTE: only one axiom may be specified at once
         # NOTE: no error handling implemented for input tuples
         # NOTE: complex axioms, i.e., intersections and unions, are currently not supported
+        """
         with self.onto:
             for axiom in axiom_tuples:
                 if axiom[0] and axiom[1] and not axiom[-1]:

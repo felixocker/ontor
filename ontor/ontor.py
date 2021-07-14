@@ -43,17 +43,6 @@ logger = logging.getLogger(__name__)
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 logging.basicConfig(filename=timestamp+"_om.log", level=logging.DEBUG)
 
-OWL_PROP_CHARACS = [FunctionalProperty, InverseFunctionalProperty, TransitiveProperty,\
-                    SymmetricProperty, AsymmetricProperty, ReflexiveProperty, IrreflexiveProperty]
-
-DP_RANGE_TYPES = {"boolean": bool,
-                  "float": float,
-                  "integer": int,
-                  "string": str,
-                  "date": datetime.date,
-                  "time": datetime.time,
-                  "datetime": datetime.datetime}
-
 @contextmanager
 def redirect_to_log():
     with open(os.devnull, "w") as devnull:
@@ -88,6 +77,16 @@ def load_json(json_file):
 
 class OntoEditor:
     """create, load, and edit ontologies"""
+
+    _prop_types = [FunctionalProperty, InverseFunctionalProperty, TransitiveProperty,\
+                   SymmetricProperty, AsymmetricProperty, ReflexiveProperty, IrreflexiveProperty]
+    _dp_range_types = {"boolean": bool,
+                       "float": float,
+                       "integer": int,
+                       "string": str,
+                       "date": datetime.date,
+                       "time": datetime.time,
+                       "datetime": datetime.datetime}
 
     def __init__(self, iri, path, import_paths=None):
         """
@@ -246,7 +245,7 @@ class OntoEditor:
                     my_op.range.append(self.onto[op[3]])
                 for count, charac in enumerate(op[4:11]):
                     if charac:
-                        my_op.is_a.append(OWL_PROP_CHARACS[count])
+                        my_op.is_a.append(self._prop_types[count])
                 if op[-1]:
                     my_op.inverse_property = self.onto[op[11]]
         self.onto.save(file = self.filename)
@@ -265,7 +264,7 @@ class OntoEditor:
                 else:
                     logger.warning(f"unexpected dp info: {dp}")
                     continue
-                if dp[4] not in list(DP_RANGE_TYPES.keys()):
+                if dp[4] not in list(self._dp_range_types.keys()):
                     logger.warning(f"unexpected dp range: {dp}")
                     continue
                 if dp[2]:
@@ -273,25 +272,25 @@ class OntoEditor:
                 if dp[3]:
                     my_dp.domain.append(self.onto[dp[3]])
                 if dp[4] and not any(dp[5:]):
-                    my_dp.range = [DP_RANGE_TYPES[dp[4]]]
+                    my_dp.range = [self._dp_range_types[dp[4]]]
                 elif dp[4] and dp[7] and not any(dp[5:7] + dp[8:]):
-                    my_dp.range = [ConstrainedDatatype(DP_RANGE_TYPES[dp[4]], min_inclusive=dp[7], max_inclusive=dp[7])]
+                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], min_inclusive=dp[7], max_inclusive=dp[7])]
                 elif dp[4] and dp[5] and dp[8] and not any(dp[6:8] + dp[9]):
-                    my_dp.range = [ConstrainedDatatype(DP_RANGE_TYPES[dp[4]], min_exclusive=dp[5], max_exclusive=dp[8])]
+                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], min_exclusive=dp[5], max_exclusive=dp[8])]
                 elif dp[4] and dp[5] and dp[9] and not any(dp[6:9]):
-                    my_dp.range = [ConstrainedDatatype(DP_RANGE_TYPES[dp[4]], min_exclusive=dp[5], max_inclusive=dp[9])]
+                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], min_exclusive=dp[5], max_inclusive=dp[9])]
                 elif dp[4] and dp[6] and dp[8] and not any(dp[5] + dp[7] + dp[9]):
-                    my_dp.range = [ConstrainedDatatype(DP_RANGE_TYPES[dp[4]], min_inclusive=dp[6], max_exclusive=dp[8])]
+                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], min_inclusive=dp[6], max_exclusive=dp[8])]
                 elif dp[4] and dp[6] and dp[9] and not any(dp[5] + dp[7:9]):
-                    my_dp.range = [ConstrainedDatatype(DP_RANGE_TYPES[dp[4]], min_inclusive=dp[6], max_inclusive=dp[9])]
+                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], min_inclusive=dp[6], max_inclusive=dp[9])]
                 elif dp[4] and dp[5] and not any(dp[6:]):
-                    my_dp.range = [ConstrainedDatatype(DP_RANGE_TYPES[dp[4]], min_exclusive=dp[5])]
+                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], min_exclusive=dp[5])]
                 elif dp[4] and dp[6] and not any(dp[5] + dp[7]):
-                    my_dp.range = [ConstrainedDatatype(DP_RANGE_TYPES[dp[4]], min_inclusive=dp[6])]
+                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], min_inclusive=dp[6])]
                 elif dp[4] and dp[8] and not any(dp[5:8] + dp[9]):
-                    my_dp.range = [ConstrainedDatatype(DP_RANGE_TYPES[dp[4]], max_exclusive=dp[8])]
+                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], max_exclusive=dp[8])]
                 elif dp[4] and dp[9] and not any(dp[5:9]):
-                    my_dp.range = [ConstrainedDatatype(DP_RANGE_TYPES[dp[4]], max_inclusive=dp[9])]
+                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], max_inclusive=dp[9])]
                 else:
                     logger.warning(f"unexpected dp range restriction: {dp}")
         self.onto.save(file = self.filename)
@@ -308,7 +307,7 @@ class OntoEditor:
                     logger.warning(f"unexpected instance info: {inst}")
                 if not inst[2] and not inst[3]:
                     continue
-# TODO: handle datatypes correctly for DPs, depending on range of dp? - use DP_RANGE_TYPES as above
+# TODO: handle datatypes correctly for DPs, depending on range of dp? - use self._dp_range_types as above
 # simply add another optional element to list so that datatype may be specified
 # owlready support for: int, float, bool, string, date, time, datetime, locstring (incl lang) - use dict
                 if inst[2] and inst[3]:
@@ -369,7 +368,7 @@ class OntoEditor:
         with self.onto:
             for elem in elem_list:
                 parents = list(set(self.onto[elem].ancestors()).intersection(self.onto[elem].is_a))
-                parent = [p for p in parents if not p in OWL_PROP_CHARACS]
+                parent = [p for p in parents if not p in self._prop_types]
                 if len(parent) > 1:
                     logger.warning(f"unexpected parent classes: {parents}")
                 descendants = list(self.onto[elem].descendants())

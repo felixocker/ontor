@@ -28,15 +28,17 @@ import os
 import sys
 import textwrap
 import traceback
+
 from contextlib import contextmanager
 from io import StringIO
-from owlready2 import destroy_entity, get_ontology, types, Thing, Nothing,\
+from owlready2 import default_world, destroy_entity, get_ontology, onto_path, types,\
+                      sync_reasoner_hermit, sync_reasoner_pellet, Thing, Nothing,\
                       AllDisjoint, AllDifferent, DataProperty, ObjectProperty,\
+                      World, Restriction, ConstrainedDatatype,\
                       FunctionalProperty, InverseFunctionalProperty,\
                       TransitiveProperty, SymmetricProperty, AsymmetricProperty,\
-                      ReflexiveProperty, IrreflexiveProperty, World, default_world,\
-                      Restriction, ConstrainedDatatype, sync_reasoner_hermit, sync_reasoner_pellet,\
-                      onto_path
+                      ReflexiveProperty, IrreflexiveProperty
+
 import queries
 
 logger = logging.getLogger(__name__)
@@ -78,6 +80,7 @@ def load_json(json_file):
 class OntoEditor:
     """create, load, and edit ontologies"""
 
+    # NOTE: _prop_types corresponds to owlready2.prop._TYPE_PROPS; defined here to ensure order
     _prop_types = [FunctionalProperty, InverseFunctionalProperty, TransitiveProperty,\
                    SymmetricProperty, AsymmetricProperty, ReflexiveProperty, IrreflexiveProperty]
     _dp_range_types = {"boolean": bool,
@@ -447,7 +450,7 @@ class OntoEditor:
             logger.warning(f"the ontology is inconsistent: {inconsistent_classes}")
             inconsistent_classes.remove(Nothing)
             return inconsistent_classes
-        elif save and not inconsistent_classes:
+        if save and not inconsistent_classes:
             inf_onto.save(file = self.filename)
             self.reload_from_file()
         return None

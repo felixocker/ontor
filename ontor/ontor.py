@@ -29,7 +29,6 @@ import sys
 import textwrap
 import traceback
 from contextlib import contextmanager
-from datetime import datetime
 from io import StringIO
 from owlready2 import destroy_entity, get_ontology, types, Thing, Nothing,\
                       AllDisjoint, AllDifferent, DataProperty, ObjectProperty,\
@@ -41,7 +40,7 @@ from owlready2 import destroy_entity, get_ontology, types, Thing, Nothing,\
 import queries
 
 logger = logging.getLogger(__name__)
-timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 logging.basicConfig(filename=timestamp+"_om.log", level=logging.DEBUG)
 
 OWL_PROP_CHARACS = [FunctionalProperty, InverseFunctionalProperty, TransitiveProperty,\
@@ -53,7 +52,7 @@ DP_RANGE_TYPES = {"boolean": bool,
                   "string": str,
                   "date": datetime.date,
                   "time": datetime.time,
-                  "datetime": datetime}
+                  "datetime": datetime.datetime}
 
 @contextmanager
 def redirect_to_log():

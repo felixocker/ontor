@@ -8,6 +8,7 @@ pip-wheel-metadata/
 *.owl
 *.nt
 *.log
+*.html
 
 # individual files
 

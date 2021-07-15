@@ -105,6 +105,7 @@ def modify_onto(break_by_disjoint=False):
     # print([elem for elem in ontor3.get_elems()[1]])
 
     ontor3.export_ntriples()
+    ontor3.visualize()
 
 def check_import():
     ontor4 = ontor.OntoEditor("http://example.org/onto-ex.owl", "./onto-ex.owl", ["."])

@@ -24,7 +24,9 @@ import datetime
 import importlib.resources as pkg_resources
 import json
 import logging
+import networkx as nx
 import os
+import pandas as pd
 import sys
 import textwrap
 import traceback
@@ -38,6 +40,7 @@ from owlready2 import default_world, destroy_entity, get_ontology, onto_path, ty
                       FunctionalProperty, InverseFunctionalProperty,\
                       TransitiveProperty, SymmetricProperty, AsymmetricProperty,\
                       ReflexiveProperty, IrreflexiveProperty
+from pyvis.network import Network
 
 import queries
 
@@ -593,3 +596,53 @@ class OntoEditor:
         if user_input == "q":
             print("quitting - process needs to be restarted")
             sys.exit(0)
+
+    @staticmethod
+    def remove_nt_brackets(triple):
+        for c, _ in enumerate(triple):
+            triple[c] = triple[c].replace('<', '')
+            triple[c] = triple[c].replace('>', '')
+        return triple
+
+    def __parse_ntriples(self):
+        self.export_ntriples()
+        f = open(self.filename.rsplit(".", 1)[0] + ".nt", "r")
+        lines = f.readlines()
+        df = pd.DataFrame(columns=["subject", "predicate", "object"])
+        for rownum, row in enumerate(lines):
+            df.loc[rownum] = self.remove_nt_brackets(row.rsplit(".", 1)[0].split(" ")[:3])
+        return df
+
+    def visualize(self, interactive=False):
+        df = self.__parse_ntriples()
+        G = nx.from_pandas_edgelist(df, source="subject", target="object", edge_attr="predicate", create_using=nx.MultiDiGraph())
+        # manually set predicates as labels
+        for e in G.edges.items():
+            e[1]["label"] = e[1].pop("predicate")
+        net = Network(directed=True, height='100%', width='100%', bgcolor='#222222', font_color='white')
+        net.set_options("""
+            var options = {
+                "nodes": {
+                    "font": {
+                    "color": "rgba(52,52,52,1)"
+                    }
+                },
+                "edges": {
+                    "color": {
+                    "inherit": true
+                    },
+                    "font": {
+                    "color": "rgba(158,158,158,1)",
+                    "strokeWidth": 0
+                    },
+                    "smooth": false
+                },
+                "physics": {
+                    "minVelocity": 0.75
+                }
+            }
+        """)
+        net.from_nx(G)
+        if interactive:
+            net.show_buttons()
+        net.show(self.filename.rsplit(".", 1)[0] + ".html")

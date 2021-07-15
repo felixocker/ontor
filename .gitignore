@@ -6,6 +6,7 @@ pip-wheel-metadata/
 
 # file types
 *.owl
+*.nt
 *.log
 
 # individual files

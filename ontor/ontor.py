@@ -140,6 +140,11 @@ class OntoEditor:
         self.filename = new_name
         self.path = "file://./" + new_name
 
+    def export_ntriples(self):
+        """saves with same filename, but as ntriples"""
+        ntfilename = self.filename.rsplit(".", 1)[0] + ".nt"
+        self.onto.save(file = ntfilename, format = "ntriples")
+
     def get_elems(self):
         """
         :return: nodes and edges from onto

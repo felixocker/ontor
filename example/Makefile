@@ -7,6 +7,7 @@ all : example.py
 .PHONY : clean
 clean:
 	rm -f *.owl
+	rm -f *.nt
 	rm -f *.log
 	rm -rf __pycache__/
 	find ../ontor -name __pycache__ -exec rm -rf {} \;

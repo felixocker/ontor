@@ -102,8 +102,9 @@ class OntoEditor:
         self.path = path
         self.filename = path.split(sep="/")[-1]
         self.query_prefixes = pkg_resources.read_text(queries, 'prefixes.sparql')
+        onto_path.extend(list(set(path.rsplit("/", 1)[0]) - set(onto_path)))
         if import_paths:
-            onto_path.extend(import_paths)
+            onto_path.extend(list(set(import_paths) - set(onto_path)))
         try:
             self.onto = get_ontology(self.path).load()
             logger.info("successfully loaded ontology specified")
@@ -123,7 +124,8 @@ class OntoEditor:
     def add_import(self, other_path):
         """load an additional onto"""
         if "file://" in other_path:
-            onto_path.append(other_path.rsplit("/", 1)[0].removeprefix("file://"))
+            onto_path.extend(list(set(other_path.rsplit("/", 1)[0].\
+                             removeprefix("file://")) - set(onto_path)))
         onto_import = get_ontology(other_path).load()
         with self.onto:
             self.onto.imported_ontologies.append(onto_import)

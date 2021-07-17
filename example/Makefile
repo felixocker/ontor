@@ -9,6 +9,7 @@ clean:
 	rm -f *.owl
 	rm -f *.nt
 	rm -f *.log
+	rm -f *.xml
 	rm -rf __pycache__/
 	find ../ontor -name __pycache__ -exec rm -rf {} \;
 

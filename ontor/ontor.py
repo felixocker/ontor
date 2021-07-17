@@ -46,7 +46,7 @@ timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 logging.basicConfig(filename=timestamp+"_om.log", level=logging.DEBUG)
 
 @contextmanager
-def redirect_to_log():
+def _redirect_to_log():
     with open(os.devnull, "w") as devnull:
         old_stdout = sys.stdout
         old_stderr = sys.stderr
@@ -60,11 +60,11 @@ def redirect_to_log():
             sys.stdout = old_stdout
             sys.stderr = old_stderr
             if result_out.getvalue():
-                logger.info(f"reasoner output redirect: \n{indent_log(result_out.getvalue())}")
+                logger.info(f"reasoner output redirect: \n{_indent_log(result_out.getvalue())}")
             if result_err.getvalue():
-                logger.info(f"reasoner errors redirect: \n{indent_log(result_err.getvalue())}")
+                logger.info(f"reasoner errors redirect: \n{_indent_log(result_err.getvalue())}")
 
-def indent_log(info):
+def _indent_log(info):
     return textwrap.indent(info, '>   ')
 
 def load_csv(csv_file):
@@ -113,7 +113,7 @@ class OntoEditor:
             self.onto.save(file = self.filename)
             logger.info("ontology file did not exist - created a new one")
 
-    def reload_from_file(self):
+    def _reload_from_file(self):
         try:
             self.onto = get_ontology(self.path).load()
             logger.info("successfully reloaded ontology from file")
@@ -156,7 +156,7 @@ class OntoEditor:
             ins = self.onto.individuals()
         return [cl, ops, dps, ins]
 
-    def build_query(self, body):
+    def _build_query(self, body):
         """
         :param body: body of the SPARQL query, without prefixes
         :return: complete SPARQL query consisting of prefixes and body
@@ -183,7 +183,7 @@ class OntoEditor:
         axioms = []
         for body in ['class_axioms.sparql', 'op_axioms.sparql', 'dp_axioms.sparql']:
             query_ax = pkg_resources.read_text(queries, body)
-            axioms.append(self.query_onto(self.build_query(query_ax)))
+            axioms.append(self.query_onto(self._build_query(query_ax)))
         return axioms
 
     def add_axioms(self, axiom_tuples):
@@ -212,14 +212,14 @@ class OntoEditor:
                         lst = my_class.equivalent_to
                     else:
                         lst = my_class.is_a
-                    self.add_restr_to_class_def(lst, self.onto[axiom[2]], axiom[3],\
+                    self._add_restr_to_class_def(lst, self.onto[axiom[2]], axiom[3],\
                                                 axiom[4], self.onto[axiom[5]], axiom)
                 else:
                     logger.warning(f"unexpected input: {axiom}")
         self.onto.save(file = self.filename)
 
     @staticmethod
-    def add_restr_to_class_def(lst, prop, p_type, cardin, obj, axiom):
+    def _add_restr_to_class_def(lst, prop, p_type, cardin, obj, axiom):
         """
         :param lst: list of an element's axioms - equivalent_to or is_a
         :param prop: object property
@@ -413,18 +413,18 @@ class OntoEditor:
     def remove_restrictions_on_class(self, class_name):
         with self.onto:
             for lst in self.onto[class_name].is_a, self.onto[class_name].equivalent_to:
-                self.remove_restr_from_class_def(lst)
+                self._remove_restr_from_class_def(lst)
         self.onto.save(file = self.filename)
 
     def remove_restrictions_including_prop(self, prop_name):
         with self.onto:
             for c in self.onto.classes():
                 for lst in c.is_a, c.equivalent_to:
-                    self.remove_restr_from_class_def(lst, self.onto[prop_name])
+                    self._remove_restr_from_class_def(lst, self.onto[prop_name])
         self.onto.save(file = self.filename)
 
     @staticmethod
-    def remove_restr_from_class_def(lst, prop=None):
+    def _remove_restr_from_class_def(lst, prop=None):
         """
         remove all restricitons from list
         :param prop: optional; limits results to restrictions including a certain property
@@ -442,11 +442,11 @@ class OntoEditor:
         inconsistent_classes = None
         # add temporary world for inferences
         inferences = World()
-        self.check_reasoner(reasoner)
+        self._check_reasoner(reasoner)
         inf_onto = inferences.get_ontology(self.path).load()
         with inf_onto:
             try:
-                with redirect_to_log():
+                with _redirect_to_log():
                     if reasoner == "hermit":
                         sync_reasoner_hermit([inf_onto])
                     elif reasoner == "pellet":
@@ -455,18 +455,18 @@ class OntoEditor:
                 inconsistent_classes = list(inf_onto.inconsistent_classes())
             except Exception as exc:
                 print("There was a more complex issue, e.g., with disjoints - check log for traceback")
-                logger.error(repr(exc) + "\n" + indent_log(traceback.format_exc()))
+                logger.error(repr(exc) + "\n" + _indent_log(traceback.format_exc()))
         if inconsistent_classes:
             logger.warning(f"the ontology is inconsistent: {inconsistent_classes}")
             inconsistent_classes.remove(Nothing)
             return inconsistent_classes
         if save and not inconsistent_classes:
             inf_onto.save(file = self.filename)
-            self.reload_from_file()
+            self._reload_from_file()
         return None
 
     @staticmethod
-    def check_reasoner(reasoner):
+    def _check_reasoner(reasoner):
         reasoners = ["hermit", "pellet"]
         if reasoner not in reasoners:
             logger.warning(f"unexpected reasoner: {reasoner} - available reasoners: {reasoners}")
@@ -477,13 +477,13 @@ class OntoEditor:
         :param reasoner: reasoner can be eiter hermit or pellet
         """
         ax_msg = "Potentially inconsistent axiom: "
-        self.check_reasoner(reasoner)
+        self._check_reasoner(reasoner)
         inconsistent_classes = self.reasoning(reasoner=reasoner, save=False)
         if not inconsistent_classes:
             print("No inconsistencies detected.")
         elif inconsistent_classes:
             print(f"Inconsistent classes are: {inconsistent_classes}")
-            if self.bool_user_interaction("Show further information?"):
+            if self._bool_user_interaction("Show further information?"):
                 debug = World()
                 debug_onto = debug.get_ontology(self.path).load()
                 with debug_onto:
@@ -496,7 +496,7 @@ class OntoEditor:
             for rel in rel_types:
                 for count, ic in enumerate(inconsistent_classes):
                     for ax in pot_probl_ax[rel][count]:
-                        if self.bool_user_interaction("Delete " + rel + " axiom?", ax_msg + str(ax)):
+                        if self._bool_user_interaction("Delete " + rel + " axiom?", ax_msg + str(ax)):
                             getattr(self.onto[ic.name], rel).remove(ax)
                             # IDEA: instead of simply deleting axioms, also allow user to edit them
             self.onto.save(file = self.filename)
@@ -509,7 +509,7 @@ class OntoEditor:
         return [self.get_class_restrictions(ic.name, rel) for ic in inconsistent_classes]
 
     @staticmethod
-    def bool_user_interaction(question, info=None):
+    def _bool_user_interaction(question, info=None):
         """simple CLI for yes/ no/ quit interaction"""
         answer = {"y": True,
                   "n": False}

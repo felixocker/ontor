@@ -28,11 +28,13 @@ def create_first_onto():
                ["computer", None, None, None, None, None, None],\
                ["process", None, None, None, None, None, None]]
     ops = [["owns", None, "human", "computer", True, False, False, False, False, False, False, None]]
-    dps = [["clock_rate", None, False, "computer", "float", None, None, None, None, None]]
+    dps = [["clock_rate", None, False, "computer", "float", None, None, None, None, None],
+           ["pixel_width", None, False, "computer", "integer", None, None, None, None, None],
+           ["description", None, False, "computer", "string", None, None, None, None, None]]
     axs = [["human", None, "owns", "some", None, "computer", False]]
-    ins = [["felix", "human", None, None],\
-           ["x1", "computer", None, None],\
-           ["felix", "human", "owns", "x1"]]
+    ins = [["felix", "human", None, None, None],\
+           ["x1", "computer", None, None, None],\
+           ["felix", "human", "owns", "x1", None]]
     ontor1 = ontor.OntoEditor(iri, fname)
     ontor1.add_axioms(classes)
     ontor1.add_ops(ops)
@@ -54,10 +56,12 @@ def modify_onto(break_by_disjoint=False):
     classes = [["test", "human", None, None, None, None, None],\
                [None, None, None, None, None, None, None],\
                ["test2", "test", None, None, None, None, False]]
-    ins = [["testinstance", "human", "owns", "x1"],\
-           ["ti2", None, None, None],\
-           ["x1", "computer", "clock_rate", 3.1],\
-           ["x1", "computer", "owns", "x1"]]
+    ins = [["testinstance", "human", "owns", "x1", None],\
+           ["ti2", None, None, None, None],\
+           ["x1", "computer", "clock_rate", "3.1", "float"],\
+           ["x1", "computer", "pixel_width", "1920", "integer"],\
+           ["x1", "computer", "description", "my personal x1", "string"],\
+           ["x1", "computer", "owns", "x1", None]]
     ontor3 = ontor.OntoEditor("http://example.org/onto-ex.owl", "./onto-ex.owl")
     ontor3.add_axioms(classes)
     print(list(elem for elem in ontor3.get_elems()[0]))

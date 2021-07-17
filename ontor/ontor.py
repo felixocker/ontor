@@ -315,15 +315,18 @@ class OntoEditor:
                     my_instance = self.onto[inst[1]](inst[0])
                 else:
                     logger.warning(f"unexpected instance info: {inst}")
-                if not inst[2] and not inst[3]:
+                if not any(inst[2:]):
                     continue
-# TODO: handle datatypes correctly for DPs, depending on range of dp? - use self._dp_range_types as above
-# simply add another optional element to list so that datatype may be specified
-# owlready support for: int, float, bool, string, date, time, datetime, locstring (incl lang) - use dict
                 if inst[2] and inst[3]:
                     if DataProperty in self.onto[inst[2]].is_a:
-                        val = inst[3]
-                    elif ObjectProperty in self.onto[inst[2]].is_a:
+                        if inst[4] and not inst[4] in self._dp_range_types:
+                            logger.warning(f"unexpected DP range: {inst}")
+                        elif inst[4]:
+                            val = self._dp_range_types[inst[4]](inst[3])
+                        else:
+                            logger.warning(f"DP range undefined - defaulting to string: {inst}")
+                            val = inst[3]
+                    elif ObjectProperty in self.onto[inst[2]].is_a and not inst[4]:
                         val = self.onto[inst[3]]
                     self.add_instance_relation(my_instance, inst[2], val)
                 else:

@@ -189,7 +189,8 @@ class OntoEditor:
     def add_axioms(self, axiom_tuples):
         """
         :param axiom_tuples: list of tuples of the form [class, superclass, property,
-        cardinality type, cardinality, object, equivalence(bool)]
+        cardinality type, cardinality, op-object, dp-range, dp-min-ex, dp-min-in,
+        dp-exact, dp-max-in, dp-max-ex, equivalence(bool)]
         # NOTE: only one axiom may be specified at once
         # NOTE: no error handling implemented for input tuples
         # NOTE: complex axioms, i.e., intersections and unions, are currently not supported
@@ -207,32 +208,106 @@ class OntoEditor:
                     logger.warning(f"no class defined: {axiom}")
                 if not axiom[2] and not axiom[3] and not axiom[4] and not axiom[5]:
                     continue
-                if axiom[2] and axiom[3] and axiom[5]:
+                if all([axiom[i] for i in [2,3,5]]) or all([axiom[i] for i in [2,3,6]]):
                     if axiom[-1]:
                         lst = my_class.equivalent_to
                     else:
                         lst = my_class.is_a
-                    self._add_restr_to_class_def(lst, self.onto[axiom[2]], axiom[3],\
-                                                axiom[4], self.onto[axiom[5]], axiom)
+                    self._add_restr_to_def(lst, [self.onto[axiom[2]], axiom[3],\
+                                           axiom[4]], [self.onto[axiom[5]]],\
+                                           axiom[6:12], axiom)
                 else:
                     logger.warning(f"unexpected input: {axiom}")
         self.onto.save(file = self.filename)
 
-    @staticmethod
-    def _add_restr_to_class_def(lst, prop, p_type, cardin, obj, axiom):
+    def _add_restr_to_def(self, lst, resinfo, opinfo, dpinfo, axiom):
         """
         :param lst: list of an element's axioms - equivalent_to or is_a
-        :param prop: object property
-        :param p_type: property restriction type
-        :param cardin: cardinality
-        :param obj: object
+        :param resinfo: tuple with general restriction info [prop, p_type, cardin]
+        :param opinfo: tuple with op restriction info [op-object]
+        :param dpinfo: tuple with dp restriction info
+        [dprange, minex, minin, exact, maxin, maxex]
         """
-        if p_type in ["some", "only", "value"] and not cardin:
-            lst.append(getattr(prop, p_type)(obj))
-        elif p_type in ["exactly", "max", "min"] and cardin:
-            lst.append(getattr(prop, p_type)(cardin, obj))
+        if any(opinfo) and not any(dpinfo):
+            obj = opinfo[0]
+        elif not any(opinfo) and any(dpinfo):
+            obj = None
+            if resinfo[1] in ["some", "only"]:
+                obj = self._dp_constraint(dpinfo)[0]
+            elif resinfo[1] in ["value"]:
+                obj = self._dp_range_types[dpinfo[0]](dpinfo[3])
+            if obj is None:
+                logger.warning(f"invalid dp constraint: {axiom}")
+                return
+            if resinfo[1] in ["exactly", "max", "min"]:
+                # NOTE: this may be resolved in future versions of Owlready2
+                logger.warning(f"qualified cardinality restrictions currently not supported for DPs: {axiom}")
+                return
+        else:
+            logger.warning(f"restriction includes both op and dp: {axiom}")
+        if resinfo[1] in ["some", "only", "value"] and not resinfo[2]:
+            lst.append(getattr(resinfo[0], resinfo[1])(obj))
+        elif resinfo[1] in ["exactly", "max", "min"] and resinfo[2]:
+            lst.append(getattr(resinfo[0], resinfo[1])(resinfo[2], obj))
         else:
             logger.warning(f"unexpected cardinality definition: {axiom}")
+
+    def _dp_constraint(self, dpres):
+        """
+        :param dpres: DP restriction is list of the form
+        [dprange, minex, minin, exact, maxin, maxex]
+        :return: constrained datatype for DP, set to None if invalid
+        """
+        dp_range = None
+        if dpres[0] not in list(self._dp_range_types.keys()):
+            logger.warning(f"unexpected dp range: {dpres}")
+        if self._check_available_vals(dpres, [0]):
+            dp_range = [self._dp_range_types[dpres[0]]]
+        elif self._check_available_vals(dpres, [0,3]):
+            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                        min_inclusive=dpres[3], max_inclusive=dpres[3])]
+        elif self._check_available_vals(dpres, [0,1,4]):
+            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                        min_exclusive=dpres[1], max_inclusive=dpres[4])]
+        elif self._check_available_vals(dpres, [0,1,5]):
+            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                        min_exclusive=dpres[1], max_exclusive=dpres[5])]
+        elif self._check_available_vals(dpres, [0,2,4]):
+            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                        min_inclusive=dpres[2], max_inclusive=dpres[4])]
+        elif self._check_available_vals(dpres, [0,2,5]):
+            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                        min_inclusive=dpres[2], max_exclusive=dpres[5])]
+        elif self._check_available_vals(dpres, [0,1]):
+            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                        min_exclusive=dpres[1])]
+        elif self._check_available_vals(dpres, [0,2]):
+            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                        min_inclusive=dpres[2])]
+        elif self._check_available_vals(dpres, [0,4]):
+            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                        max_inclusive=dpres[4])]
+        elif self._check_available_vals(dpres, [0,5]):
+            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                        max_exclusive=dpres[5])]
+        else:
+            logger.warning(f"unexpected dp range restriction: {dpres}")
+        return dp_range
+
+    @staticmethod
+    def _check_available_vals(values, expected_values):
+        """
+        :param values: list with values
+        :param expected_values: list with indices of expected values
+        :return: True iff expected indices contain values
+        """
+        indices = [x for x, _ in enumerate(values)]
+        assert all([x in indices for x in expected_values]), "invalid expected_values"
+        if all([values[i] for i in expected_values]) and\
+           not any([values[i] for i in [e for e in indices if not e in expected_values]]):
+            return True
+        else:
+            return False
 
     def add_ops(self, op_tuples):
         """
@@ -263,51 +338,38 @@ class OntoEditor:
     def add_dps(self, dp_tuples):
         """
         :param dp_tuples: list of input tuples of the form
-        [dp, super-dp, functional, domain, range, min-ex, min-in, exact, max-ex, max-in]
+        [dp, super-dp, functional, domain, range, minex, minin, exact, maxin, maxex]
         """
         with self.onto:
             for dp in dp_tuples:
-                if dp[0] and not dp[1]:
-                    my_dp = types.new_class(dp[0], (DataProperty, ))
-                elif dp[0] and dp[1]:
-                    my_dp = types.new_class(dp[0], (self.onto[dp[1]], ))
-                else:
+                try:
+                    if dp[0] and not dp[1]:
+                        my_dp = types.new_class(dp[0], (DataProperty, ))
+                    elif dp[0] and dp[1]:
+                        my_dp = types.new_class(dp[0], (self.onto[dp[1]], ))
+                except:
                     logger.warning(f"unexpected dp info: {dp}")
-                    continue
-                if dp[4] not in list(self._dp_range_types.keys()):
-                    logger.warning(f"unexpected dp range: {dp}")
                     continue
                 if dp[2]:
                     my_dp.is_a.append(FunctionalProperty)
                 if dp[3]:
-                    my_dp.domain.append(self.onto[dp[3]])
-                if dp[4] and not any(dp[5:]):
-                    my_dp.range = [self._dp_range_types[dp[4]]]
-                elif dp[4] and dp[7] and not any(dp[5:7] + dp[8:]):
-                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], min_inclusive=dp[7], max_inclusive=dp[7])]
-                elif dp[4] and dp[5] and dp[8] and not any(dp[6:8] + dp[9]):
-                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], min_exclusive=dp[5], max_exclusive=dp[8])]
-                elif dp[4] and dp[5] and dp[9] and not any(dp[6:9]):
-                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], min_exclusive=dp[5], max_inclusive=dp[9])]
-                elif dp[4] and dp[6] and dp[8] and not any(dp[5] + dp[7] + dp[9]):
-                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], min_inclusive=dp[6], max_exclusive=dp[8])]
-                elif dp[4] and dp[6] and dp[9] and not any(dp[5] + dp[7:9]):
-                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], min_inclusive=dp[6], max_inclusive=dp[9])]
-                elif dp[4] and dp[5] and not any(dp[6:]):
-                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], min_exclusive=dp[5])]
-                elif dp[4] and dp[6] and not any(dp[5] + dp[7]):
-                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], min_inclusive=dp[6])]
-                elif dp[4] and dp[8] and not any(dp[5:8] + dp[9]):
-                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], max_exclusive=dp[8])]
-                elif dp[4] and dp[9] and not any(dp[5:9]):
-                    my_dp.range = [ConstrainedDatatype(self._dp_range_types[dp[4]], max_inclusive=dp[9])]
-                else:
-                    logger.warning(f"unexpected dp range restriction: {dp}")
+                    try:
+                        my_dp.domain.append(self.onto[dp[3]])
+                    except:
+                        logger.warning(f"unexpected dp domain: {dp}")
+                if any(dp[4:]):
+                    dprange = self._dp_constraint(dp[4:])
+                    if dprange:
+                        my_dp.range = self._dp_constraint(dp[4:])
+                    else:
+                        logger.warning(f"unexpected dp range: {dp}")
+                        continue
         self.onto.save(file = self.filename)
 
     def add_instances(self, instance_tuples):
         """
-        :param instance_tuples: list of tuples of the form [instance, class, property, range, range-type]
+        :param instance_tuples: list of tuples of the form
+        [instance, class, property, range, range-type]
         """
         with self.onto:
             for inst in instance_tuples:

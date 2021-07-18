@@ -31,7 +31,7 @@ def create_first_onto():
     dps = [["clock_rate", None, False, "computer", "float", None, None, None, None, None],
            ["pixel_width", None, False, "computer", "integer", None, None, None, None, None],
            ["description", None, False, "computer", "string", None, None, None, None, None]]
-    axs = [["human", None, "owns", "some", None, "computer", False]]
+    axs = [["human", None, "owns", "some", None, "computer", None, None, None, None, None, None, False]]
     ins = [["felix", "human", None, None, None],\
            ["x1", "computer", None, None, None],\
            ["felix", "human", "owns", "x1", None]]

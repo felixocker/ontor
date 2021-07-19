@@ -234,7 +234,7 @@ class OntoEditor:
             obj = None
             if resinfo[1] in ["some", "only"]:
                 obj = self._dp_constraint(dpinfo)
-            elif resinfo[1] in ["value"]:
+            elif resinfo[1] in ["value"] and dpinfo[3]:
                 obj = self._dp_range_types[dpinfo[0]](dpinfo[3])
             if obj is None:
                 logger.warning(f"invalid dp constraint: {axiom}")

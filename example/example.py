@@ -81,7 +81,7 @@ def modify_onto(break_by_disjoint=False):
                                  ["classes", ["human", "computer"]],\
                                  ["instances", ["felix", "x1"]]])
 
-    print(ontor3.get_axioms())
+    print(*ontor3.get_axioms(), sep="\n")
     ontor3.add_import("file://./onto-ex-add.owl")
     ontor3.save_as("test.owl")
 

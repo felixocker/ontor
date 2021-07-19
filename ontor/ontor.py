@@ -233,7 +233,7 @@ class OntoEditor:
         elif not any(opinfo) and any(dpinfo):
             obj = None
             if resinfo[1] in ["some", "only"]:
-                obj = self._dp_constraint(dpinfo)[0]
+                obj = self._dp_constraint(dpinfo)
             elif resinfo[1] in ["value"]:
                 obj = self._dp_range_types[dpinfo[0]](dpinfo[3])
             if obj is None:
@@ -245,6 +245,7 @@ class OntoEditor:
                 return
         else:
             logger.warning(f"restriction includes both op and dp: {axiom}")
+            return
         if resinfo[1] in ["some", "only", "value"] and not resinfo[2]:
             lst.append(getattr(resinfo[0], resinfo[1])(obj))
         elif resinfo[1] in ["exactly", "max", "min"] and resinfo[2]:
@@ -262,34 +263,39 @@ class OntoEditor:
         if dpres[0] not in list(self._dp_range_types.keys()):
             logger.warning(f"unexpected dp range: {dpres}")
         if self._check_available_vals(dpres, [0]):
-            dp_range = [self._dp_range_types[dpres[0]]]
+            dp_range = self._dp_range_types[dpres[0]]
         elif self._check_available_vals(dpres, [0,3]):
-            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
-                        min_inclusive=dpres[3], max_inclusive=dpres[3])]
+            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                                           min_inclusive=dpres[3],\
+                                           max_inclusive=dpres[3])
         elif self._check_available_vals(dpres, [0,1,4]):
-            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
-                        min_exclusive=dpres[1], max_inclusive=dpres[4])]
+            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                                           min_exclusive=dpres[1],\
+                                           max_inclusive=dpres[4])
         elif self._check_available_vals(dpres, [0,1,5]):
-            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
-                        min_exclusive=dpres[1], max_exclusive=dpres[5])]
+            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                                           min_exclusive=dpres[1],\
+                                           max_exclusive=dpres[5])
         elif self._check_available_vals(dpres, [0,2,4]):
-            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
-                        min_inclusive=dpres[2], max_inclusive=dpres[4])]
+            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                                           min_inclusive=dpres[2],\
+                                           max_inclusive=dpres[4])
         elif self._check_available_vals(dpres, [0,2,5]):
-            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
-                        min_inclusive=dpres[2], max_exclusive=dpres[5])]
+            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                                           min_inclusive=dpres[2],\
+                                           max_exclusive=dpres[5])
         elif self._check_available_vals(dpres, [0,1]):
-            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
-                        min_exclusive=dpres[1])]
+            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                                           min_exclusive=dpres[1])
         elif self._check_available_vals(dpres, [0,2]):
-            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
-                        min_inclusive=dpres[2])]
+            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                                           min_inclusive=dpres[2])
         elif self._check_available_vals(dpres, [0,4]):
-            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
-                        max_inclusive=dpres[4])]
+            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                                           max_inclusive=dpres[4])
         elif self._check_available_vals(dpres, [0,5]):
-            dp_range = [ConstrainedDatatype(self._dp_range_types[dpres[0]],\
-                        max_exclusive=dpres[5])]
+            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],\
+                                           max_exclusive=dpres[5])
         else:
             logger.warning(f"unexpected dp range restriction: {dpres}")
         return dp_range
@@ -360,7 +366,7 @@ class OntoEditor:
                 if any(dp[4:]):
                     dprange = self._dp_constraint(dp[4:])
                     if dprange:
-                        my_dp.range = self._dp_constraint(dp[4:])
+                        my_dp.range = dprange
                     else:
                         logger.warning(f"unexpected dp range: {dp}")
                         continue
@@ -553,8 +559,8 @@ class OntoEditor:
                                          infer_data_property_values=True, debug=2)
                     # IDEA: further analyze reasoner results to pin down cause of inconsistency
             rel_types = ["is_a", "equivalent_to"]
-            pot_probl_ax = {"is_a": self.get_incon_class_res("is_a", inconsistent_classes),
-                            "equivalent_to": self.get_incon_class_res("equivalent_to", inconsistent_classes)}
+            pot_probl_ax = {"is_a": self._get_incon_class_res("is_a", inconsistent_classes),
+                            "equivalent_to": self._get_incon_class_res("equivalent_to", inconsistent_classes)}
             for rel in rel_types:
                 for count, ic in enumerate(inconsistent_classes):
                     for ax in pot_probl_ax[rel][count]:
@@ -564,7 +570,7 @@ class OntoEditor:
             self.onto.save(file = self.filename)
             self.debug_onto(reasoner)
 
-    def get_incon_class_res(self, rel, inconsistent_classes):
+    def _get_incon_class_res(self, rel, inconsistent_classes):
         """
         :return: class restrictions for inconsistent_classes - does not return parent classes
         """

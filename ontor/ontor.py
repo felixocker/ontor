@@ -604,21 +604,20 @@ class OntoEditor:
             triple[c] = triple[c].replace('>', '')
         return triple
 
-    def __parse_ntriples(self):
+    def _ntriples_to_nx(self):
         self.export_ntriples()
         f = open(self.filename.rsplit(".", 1)[0] + ".nt", "r")
         lines = f.readlines()
         df = pd.DataFrame(columns=["subject", "predicate", "object"])
         for rownum, row in enumerate(lines):
             df.loc[rownum] = self.remove_nt_brackets(row.rsplit(".", 1)[0].split(" ")[:3])
-        return df
-
-    def visualize(self, interactive=False):
-        df = self.__parse_ntriples()
-        G = nx.from_pandas_edgelist(df, source="subject", target="object", edge_attr="predicate", create_using=nx.MultiDiGraph())
+        nxgraph = nx.from_pandas_edgelist(df, source="subject", target="object", edge_attr="predicate", create_using=nx.MultiDiGraph())
         # manually set predicates as labels
-        for e in G.edges.items():
+        for e in nxgraph.edges.items():
             e[1]["label"] = e[1].pop("predicate")
+        return nxgraph
+
+    def plot_nxgraph(self, nxgraph, interactive=False):
         net = Network(directed=True, height='100%', width='100%', bgcolor='#222222', font_color='white')
         net.set_options("""
             var options = {
@@ -642,7 +641,7 @@ class OntoEditor:
                 }
             }
         """)
-        net.from_nx(G)
+        net.from_nx(nxgraph)
         if interactive:
             net.show_buttons()
         net.show(self.filename.rsplit(".", 1)[0] + ".html")

@@ -604,6 +604,15 @@ class OntoEditor:
             triple[c] = triple[c].replace('>', '')
         return triple
 
+    @staticmethod
+    def _df_to_nx_incl_labels(df):
+        nxgraph = nx.from_pandas_edgelist(df, source="subject", target="object",\
+                                          edge_attr="predicate", create_using=nx.MultiDiGraph())
+        # manually set predicates as labels
+        for e in nxgraph.edges.items():
+            e[1]["label"] = e[1].pop("predicate")
+        return nxgraph
+
     def _ntriples_to_nx(self):
         self.export_ntriples()
         f = open(self.filename.rsplit(".", 1)[0] + ".nt", "r")
@@ -611,11 +620,12 @@ class OntoEditor:
         df = pd.DataFrame(columns=["subject", "predicate", "object"])
         for rownum, row in enumerate(lines):
             df.loc[rownum] = self.remove_nt_brackets(row.rsplit(".", 1)[0].split(" ")[:3])
-        nxgraph = nx.from_pandas_edgelist(df, source="subject", target="object", edge_attr="predicate", create_using=nx.MultiDiGraph())
-        # manually set predicates as labels
-        for e in nxgraph.edges.items():
-            e[1]["label"] = e[1].pop("predicate")
-        return nxgraph
+        return self._df_to_nx_incl_labels(df)
+    
+    def _query_results_to_nx(self, query_results: list):
+        clean_data = [[str(elem).split("#")[-1] for elem in row] for row in query_results]
+        df = pd.DataFrame(clean_data, columns=['subject', 'predicate', 'object'])
+        return self._df_to_nx_incl_labels(df)
 
     def plot_nxgraph(self, nxgraph, interactive=False):
         net = Network(directed=True, height='100%', width='100%', bgcolor='#222222', font_color='white')
@@ -645,3 +655,59 @@ class OntoEditor:
         if interactive:
             net.show_buttons()
         net.show(self.filename.rsplit(".", 1)[0] + ".html")
+
+    def _config_plot_query_body(self, classes: list=[], properties: list=[], focusnode: str=None, radius: int=None) -> str:
+        """
+        :param classes: classes to be returned including their instances
+        :param properties: properties to be returned
+        :param focusnode: node whose environment shall be displayed
+        :param radius: maximum distance, i.e., relations, between a node and focusnode
+        :return: body for query
+        """
+        def _sparql_set_values(node, values):
+            return "VALUES ?" + node + " {rdf:type rdfs:subClassOf " + " ".join([":" + v for v in values]) + "} . "
+        def _sparql_set_in(node, values):
+            return "FILTER ( ?" + node + " IN (" + ", ".join([":" + v for v in values]) + ") ) . "
+        querypt1 = ("SELECT DISTINCT ?s ?p ?o WHERE {\n"
+                    "?s ?p ?o . ")
+        querypt2 = "}"
+        if properties:
+            querypt_rels = _sparql_set_values("p", properties)
+        else:
+            querypt_rels = ""
+        query_nodes_dict: dict={}
+        if classes:
+            for node in ["s", "o"]:
+                querypt_classes = "?s ?p ?o . \n" + _sparql_set_in(node, classes)
+                querypt_instances = "?" + node + " a/rdfs:subClassOf* ?" + node +\
+                                    "class . \n" + _sparql_set_in(node+"class", classes)
+                query_nodes_dict[node] = "{\n" + querypt_classes + "\n} UNION {\n" +\
+                                        querypt_instances + "\n}"
+            querypt_nodes = "\n".join(query_nodes_dict.values())
+        else:
+            querypt_nodes = ""
+        query_rel_lim = ""
+        if focusnode and radius:
+            assert radius <= 23, "max radius violated"
+            if properties:
+                rels = properties
+            else:
+                rels = self.onto.properties()
+            query_rel_lim = ":" + focusnode + " " + "?/".join(["(rdf:type|rdfs:subClassOf|:" + "|:".join(rels) + ")"]*radius) + "? ?o . "
+        elif focusnode and not radius or not focusnode and radius:
+            logger.warning("focus: both a focusnode and a radius must be specified - ignoring the focus")
+        return "\n".join([querypt1, querypt_rels, querypt_nodes, query_rel_lim, querypt2])
+
+    def visualize(self, classes: list=[], properties: list=[], focusnode: str=None, radius: int=None) -> None:
+        """
+        :param classes: list of classes to be included in plot
+        :param properties: list of properties to be included in plot
+        :param radius: maximum number of relations between a node and a node of one of the classes specified
+        :return: None
+        """
+        if not classes and not properties and not focusnode and not radius:
+            nxgraph = self._ntriples_to_nx()
+        else:
+            query_results = self.query_onto(self._build_query(self._config_plot_query_body(classes, properties, focusnode, radius)))
+            nxgraph = self._query_results_to_nx(query_results)
+        self.plot_nxgraph(nxgraph)

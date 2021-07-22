@@ -104,8 +104,9 @@ def modify_onto(break_by_disjoint=False):
     # ontor3.remove_elements(["ops1"])
     # print([elem for elem in ontor3.get_elems()[1]])
 
-    ontor3.export_ntriples()
-    ontor3.plot_nxgraph(ontor3._ntriples_to_nx())
+    # ontor3.export_ntriples()
+    # ontor3.visualize()
+    ontor3.visualize(["human", "computer"], ["owns", "ops2"], "felix", 2)
 
 def check_import():
     ontor4 = ontor.OntoEditor("http://example.org/onto-ex.owl", "./onto-ex.owl", ["."])

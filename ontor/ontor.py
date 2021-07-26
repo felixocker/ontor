@@ -95,8 +95,8 @@ class OntoEditor:
                        "datetime": datetime.datetime}
 
     def __init__(self, iri: str, path: str, import_paths: list=None):
-        """
-        tries to load onto from file specified, creates new file if none is available
+        """ tries to load onto from file specified, creates new file if none is available
+
         :param iri: ontology's IRI
         :param path: path to local ontology file or URL; local is checked first
         :param import_paths: list of local directories to be checked for imports
@@ -135,8 +135,7 @@ class OntoEditor:
         self.onto.save(file = self.filename)
 
     def save_as(self, new_name: str) -> None:
-        """
-        safe ontology as new file
+        """ safe ontology as new file
         helpful, e.g., if multiple ontos were loaded
         """
         self.onto.save(file = new_name)
@@ -149,7 +148,8 @@ class OntoEditor:
         self.onto.save(file = ntfilename, format = "ntriples")
 
     def get_elems(self) -> list:
-        """
+        """ get classes, object properties, datatype properties, and intances
+
         :return: nodes and edges from onto
         """
         with self.onto:
@@ -160,7 +160,8 @@ class OntoEditor:
         return [cl, ops, dps, ins]
 
     def _build_query(self, body: str) -> str:
-        """
+        """ use default prefixes to construct entire SPARQL query
+
         :param body: body of the SPARQL query, without prefixes
         :return: complete SPARQL query consisting of prefixes and body
         """
@@ -170,10 +171,11 @@ class OntoEditor:
         return gp + sp + "\n\n" + b
 
     def query_onto(self, query: str) -> list:
-        """
+        """ query onto using SPARQL
+        NOTE: use of query_owlready messes up ranges of dps
+
         :param query: SPARQL query
         :return: query results as list
-        # NOTE: use of query_owlready messes up ranges of dps
         """
         with self.onto:
             graph = default_world.as_rdflib_graph()
@@ -190,13 +192,14 @@ class OntoEditor:
         return axioms
 
     def add_axioms(self, axiom_tuples: list) -> None:
-        """
+        """ add entire axioms to onto
+        NOTE: only one axiom may be specified at once
+        NOTE: no error handling implemented for input tuples
+        NOTE: complex axioms, i.e., intersections and unions, are currently not supported
+
         :param axiom_tuples: list of tuples of the form [class, superclass, property,
-        cardinality type, cardinality, op-object, dp-range, dp-min-ex, dp-min-in,
-        dp-exact, dp-max-in, dp-max-ex, equivalence(bool)]
-        # NOTE: only one axiom may be specified at once
-        # NOTE: no error handling implemented for input tuples
-        # NOTE: complex axioms, i.e., intersections and unions, are currently not supported
+            cardinality type, cardinality, op-object, dp-range, dp-min-ex, dp-min-in,
+            dp-exact, dp-max-in, dp-max-ex, equivalence(bool)]
         """
         with self.onto:
             for axiom in axiom_tuples:
@@ -228,8 +231,8 @@ class OntoEditor:
         :param current_axioms: list of an element's current axioms - equivalent_to or is_a
         :param resinfo: list with general restriction info [prop, p_type, cardin]
         :param opinfo: list with op restriction info [op-object]
-        :param dpinfo: list with dp restriction info
-        [dprange, minex, minin, exact, maxin, maxex]
+        :param dpinfo: list with dp restriction info [dprange, minex, minin,
+            exact, maxin, maxex]
         :param axiom: list with complete axiom info
         """
         if any(opinfo) and not any(dpinfo):
@@ -259,8 +262,8 @@ class OntoEditor:
 
     def _dp_constraint(self, dpres: list):
         """
-        :param dpres: DP restriction is list of the form
-        [dprange, minex, minin, exact, maxin, maxex]
+        :param dpres: DP restriction is list of the form [dprange, minex, minin,
+            exact, maxin, maxex]
         :return: constrained datatype for DP, set to None if invalid
         """
         dp_range = None
@@ -320,11 +323,12 @@ class OntoEditor:
             return False
 
     def add_ops(self, op_tuples: list) -> None:
-        """
-        :param op_tuples: list of tuples of the form [op, super-op, domain, range,
-        functional, inverse functional, transitive, symmetric, asymmetric, reflexive,
-        irreflexive, inverse_prop]
+        """ add object properties including their axioms to onto
         NOTE: only one inverse_prop can be processed per tuple
+
+        :param op_tuples: list of tuples of the form [op, super-op, domain, range,
+            functional, inverse functional, transitive, symmetric,
+            asymmetric, reflexive, irreflexive, inverse_prop]
         """
         with self.onto:
             for op in op_tuples:
@@ -346,9 +350,10 @@ class OntoEditor:
         self.onto.save(file = self.filename)
 
     def add_dps(self, dp_tuples: list) -> None:
-        """
-        :param dp_tuples: list of input tuples of the form
-        [dp, super-dp, functional, domain, range, minex, minin, exact, maxin, maxex]
+        """ add datatype properties including their axioms to onto
+
+        :param dp_tuples: list of input tuples of the form [dp, super-dp, functional,
+            domain, range, minex, minin, exact, maxin, maxex]
         """
         with self.onto:
             for dp in dp_tuples:
@@ -378,8 +383,8 @@ class OntoEditor:
 
     def add_instances(self, instance_tuples: list) -> None:
         """
-        :param instance_tuples: list of tuples of the form
-        [instance, class, property, range, range-type]
+        :param instance_tuples: list of tuples of the form [instance, class,
+            property, range, range-type]
         """
         with self.onto:
             for inst in instance_tuples:
@@ -412,9 +417,10 @@ class OntoEditor:
             getattr(subj, pred).append(obj)
 
     def add_distinctions(self, distinct_sets: list) -> None:
-        """
-        :param distinct_sets: list of lists with disjoint/ different elements
+        """ make classes disjoint and instances distinct
         NOTE: distinctions may lead to inconsistencies reasoners cannot handle
+
+        :param distinct_sets: list of lists with disjoint/ different elements
         """
         funcs = {"classes": AllDisjoint,
                  "instances": AllDifferent}
@@ -428,9 +434,9 @@ class OntoEditor:
         self.onto.save(file = self.filename)
 
     def remove_elements(self, elem_list: list) -> None:
-        """
-        remove elements, all their descendents and (in case of classes) instances,
+        """ remove elements, all their descendents and (in case of classes) instances,
         and all references from axioms
+
         :param elem_list: list of elements to be removed from onto
         """
         with self.onto:
@@ -445,12 +451,12 @@ class OntoEditor:
         self.onto.save(file = self.filename)
 
     def remove_from_taxo(self, elem_list: list, reassign: bool=True) -> None:
-        """
-        remove a class from the taxonomy, but keep all subclasses and instances
+        """ remove a class from the taxonomy, but keep all subclasses and instances
         by relating them to parent
+        NOTE: elem is not replaced in axioms bc this may be semantically incorrect
+
         :param elem_list: list of elements to be removed from onto
         :param reassign: add all restrictions to subclasses via is_a
-        NOTE: elem is not replaced in axioms bc this may be semantically incorrect
         """
         with self.onto:
             for elem in elem_list:
@@ -499,8 +505,8 @@ class OntoEditor:
 
     @staticmethod
     def _remove_restr_from_class_def(cls_restrictions, prop=None) -> None:
-        """
-        remove all restricitons from list
+        """ remove all restrictions from list
+
         :param cls_restrictions: restrictions on a class, either is_a or equivalent_to
         :param prop: optional; limits results to restrictions including a certain property
         """
@@ -547,8 +553,8 @@ class OntoEditor:
             logger.warning(f"unexpected reasoner: {reasoner} - available reasoners: {reasoners}")
 
     def debug_onto(self, reasoner: str="hermit") -> None:
-        """
-        interactively (CLI) fix inconsistencies
+        """ interactively (CLI) fix inconsistencies
+
         :param reasoner: reasoner to be used for inferences
         """
         ax_msg = "Potentially inconsistent axiom: "
@@ -709,7 +715,8 @@ class OntoEditor:
         return "\n".join([querypt1, querypt_rels, querypt_nodes, query_rel_lim, querypt2])
 
     def visualize(self, classes: list=[], properties: list=[], focusnode: str=None, radius: int=None) -> None:
-        """
+        """ visualize onto as a graph; generates html
+
         :param classes: list of classes to be included in plot
         :param properties: list of properties to be included in plot
         :param radius: maximum number of relations between a node and a node of one of the classes specified

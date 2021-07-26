@@ -1,8 +1,12 @@
+alabaster==0.7.12
+Babel==2.9.1
 backcall==0.2.0
 certifi==2020.12.5
 chardet==4.0.0
 decorator==4.4.2
+docutils==0.17.1
 idna==2.10
+imagesize==1.2.0
 ipython==7.25.0
 ipython-genutils==0.2.0
 isodate==0.6.0
@@ -14,6 +18,7 @@ matplotlib-inline==0.1.2
 networkx==2.5.1
 numpy==1.21.0
 Owlready2==0.30
+packaging==21.0
 pandas==1.3.0
 parso==0.8.2
 pexpect==4.8.0
@@ -28,6 +33,14 @@ pyvis==0.1.9
 rdflib==5.0.0
 requests==2.25.1
 six==1.15.0
+snowballstemmer==2.1.0
+Sphinx==4.1.1
+sphinxcontrib-applehelp==1.0.2
+sphinxcontrib-devhelp==1.0.2
+sphinxcontrib-htmlhelp==2.0.0
+sphinxcontrib-jsmath==1.0.1
+sphinxcontrib-qthelp==1.0.3
+sphinxcontrib-serializinghtml==1.1.5
 traitlets==5.0.5
 urllib3==1.26.4
 wcwidth==0.2.5

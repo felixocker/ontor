@@ -14,9 +14,10 @@ each instance of the ontor class represents an individual ontology and provides 
 
 ontor provides a tuple based syntax with JSON and CSV support for ontology editing to facilitate focusing on the ontology's content
 
-## installation
-install ontor to run the example, possibly in editable mode:\
-```pip install -e .```
+## requirements and installation
+* Python 3.9.6+
+* install ontor to run the example, possibly in editable mode: ```pip install -e .```
+* generate documentation via sphinx using the makefile in docs/: ```make html```
 
 ## demo
 interactively debug your ontology\

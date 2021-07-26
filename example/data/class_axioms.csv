@@ -4,5 +4,6 @@ test,,owns,value,,x1,,,,,,,True
 test,,owns,min,1,computer,,,,,,,
 test,,owns,max,5,computer,,,,,,,
 test2,,owns,min,6,computer,,,,,,,
+somecompany,,owns,min,6,computer,,,,,,,
 computer,,clock_rate,only,,,float,0,,,,,
 computer,,pixel_width,some,,,integer,,,1920,,,

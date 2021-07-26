@@ -39,7 +39,7 @@ from owlready2 import default_world, destroy_entity, get_ontology, onto_path, ty
                       World, Restriction, ConstrainedDatatype,\
                       FunctionalProperty, InverseFunctionalProperty,\
                       TransitiveProperty, SymmetricProperty, AsymmetricProperty,\
-                      ReflexiveProperty, IrreflexiveProperty
+                      ReflexiveProperty, IrreflexiveProperty, ThingClass
 from pyvis.network import Network
 
 import queries
@@ -491,8 +491,11 @@ class OntoEditor:
         self.onto.save(file = self.filename)
 
     def get_class_restrictions(self, class_name: str, res_type="is_a") -> list:
-        """
+        """ retrieve restrictions on specific class by restriction type
+
+        :param class_name: name of the class for which restrictions shall be returned
         :param res_type: restriction type, either is_a or equivalent_to
+        :return: list of restrictions on class
         """
         with self.onto:
             if res_type == "is_a":
@@ -566,9 +569,12 @@ class OntoEditor:
         if reasoner not in reasoners:
             logger.warning(f"unexpected reasoner: {reasoner} - available reasoners: {reasoners}")
 
-    def debug_onto(self, reasoner: str="hermit") -> None:
+    def debug_onto(self, reasoner: str="hermit", assume_correct_taxo: bool=True) -> None:
         """ interactively (CLI) fix inconsistencies
 
+        :param assume_correct_taxo: if True, the user interactions will be limited
+            to restrictions, i.e., options to delete taxonomical relations are
+            not included, e.g., A rdfs:subClassOf B
         :param reasoner: reasoner to be used for inferences
         """
         ax_msg = "Potentially inconsistent axiom: "
@@ -586,16 +592,24 @@ class OntoEditor:
                                          infer_data_property_values=True, debug=2)
                     # IDEA: further analyze reasoner results to pin down cause of inconsistency
             rel_types = ["is_a", "equivalent_to"]
-            pot_probl_ax = {"is_a": self._get_incon_class_res("is_a", inconsistent_classes),
-                            "equivalent_to": self._get_incon_class_res("equivalent_to", inconsistent_classes)}
+            if assume_correct_taxo:
+                pot_probl_ax = {"is_a": self._get_incon_class_res("is_a", inconsistent_classes),
+                                "equivalent_to": self._get_incon_class_res("equivalent_to", inconsistent_classes)}
+            else:
+                pot_probl_ax = {"is_a": [self.onto[ic.name].is_a for ic in inconsistent_classes],
+                                "equivalent_to": [self.onto[ic.name].equivalent_to for ic in inconsistent_classes]}
             for rel in rel_types:
                 for count, ic in enumerate(inconsistent_classes):
                     for ax in pot_probl_ax[rel][count]:
-                        if self._bool_user_interaction("Delete " + rel + " axiom?", ax_msg + str(ax)):
-                            getattr(self.onto[ic.name], rel).remove(ax)
+                        if self._bool_user_interaction("Delete " + rel + " axiom?",\
+                                                       ax_msg + ic.name + " " + rel + " " + str(ax)):
+                            if type(ax) == ThingClass:
+                                getattr(self.onto[ic.name], rel).remove(self.onto[ax.name])
+                            else:
+                                getattr(self.onto[ic.name], rel).remove(ax)
                             # IDEA: instead of simply deleting axioms, also allow user to edit them
             self.onto.save(file = self.filename)
-            self.debug_onto(reasoner)
+            self.debug_onto(reasoner, assume_correct_taxo)
 
     def _get_incon_class_res(self, restype: str, inconsistent_classes: list) -> list:
         """

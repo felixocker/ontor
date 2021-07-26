@@ -27,7 +27,7 @@ def create_first_onto():
     classes = [["human", None, None, None, None, None, None],\
                ["computer", None, None, None, None, None, None],\
                ["process", None, None, None, None, None, None]]
-    ops = [["owns", None, "human", "computer", True, False, False, False, False, False, False, None]]
+    ops = [["owns", None, None, "computer", False, False, False, False, False, False, False, None]]
     dps = [["clock_rate", None, False, "computer", "float", None, None, None, None, None],
            ["pixel_width", None, False, "computer", "integer", None, None, None, None, None],
            ["description", None, False, "computer", "string", None, None, None, None, None]]
@@ -55,7 +55,8 @@ def modify_onto(break_by_disjoint=False):
     """
     classes = [["test", "human", None, None, None, None, None],\
                [None, None, None, None, None, None, None],\
-               ["test2", "test", None, None, None, None, False]]
+               ["test2", "test", None, None, None, None, False],\
+               ["somecompany", "test", None, None, None, None, False]]
     ins = [["testinstance", "human", "owns", "x1", None],\
            ["ti2", None, None, None, None],\
            ["x1", "computer", "clock_rate", "3.1", "float"],\
@@ -83,14 +84,14 @@ def modify_onto(break_by_disjoint=False):
 
     print(*ontor3.get_axioms(), sep="\n")
     ontor3.add_import("file://./onto-ex-add.owl")
-    ontor3.save_as("test.owl")
+#    ontor3.save_as("test.owl")
 
 #    ontor3.remove_restrictions_on_class("test2")
 
     print("inconsistent classes")
     print(ontor3.reasoning("hermit", False))
     print("debugging")
-    ontor3.debug_onto()
+    ontor3.debug_onto(assume_correct_taxo=False)
 
     # # removing restrictions
     # print(ontor3.get_class_restrictions("test2"))

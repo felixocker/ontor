@@ -1,3 +1,4 @@
+class,superclass,property,cardinalitytype,cardinality,opobject,dprange,dpminex,dpminin,dpexact,dpmaxin,dpmaxex,equivalence
 test,,ops2,some,,computer,,,,,,,True
 test,,owns,value,,x1,,,,,,,True
 test,,owns,min,1,computer,,,,,,,

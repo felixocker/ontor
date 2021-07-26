@@ -70,12 +70,26 @@ def _redirect_to_log():
 def _indent_log(info):
     return textwrap.indent(info, '>   ')
 
-def load_csv(csv_file: str):
+def load_csv(csv_file: str, load_first_line: bool=False) -> list:
+    """ load data from CSV file
+
+    :param csv_file: input CSV file
+    :param load_first_line: indicates whether content from first row is also returned
+    :return: CSV contents as list of lists
+    """
     with open(csv_file) as f:
-        data = list(csv.reader(f))
+        if load_first_line:
+            data = list(csv.reader(f))
+        else:
+            data = list(csv.reader(f))[1:]
     return data
 
-def load_json(json_file: str):
+def load_json(json_file: str) -> dict:
+    """ load data from JSON file
+
+    :param json_file: input JSON file
+    :return: JSON contents as dictionary
+    """
     with open(json_file) as f:
         data = json.load(f)
     return data

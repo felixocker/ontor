@@ -107,7 +107,7 @@ def modify_onto(break_by_disjoint=False):
 
     # ontor3.export_ntriples()
     # ontor3.visualize()
-    ontor3.visualize(["human", "computer"], ["owns", "ops2"], "felix", 2)
+    ontor3.visualize(classes=["human","computer"], properties=["owns", "pixel_width"], focusnode="felix", radius=2)
 
 def check_import():
     ontor4 = ontor.OntoEditor("http://example.org/onto-ex.owl", "./onto-ex.owl", ["."])

@@ -708,10 +708,15 @@ class OntoEditor:
         :param radius: maximum distance, i.e., relations, between a node and focusnode
         :return: body for query
         """
+        max_radius = 5
+        nodes_to_be_ignored = ["owl:Class", "owl:Thing", "owl:NamedIndividual"]
+
         def _sparql_set_values(node, values):
             return "VALUES ?" + node + " {rdf:type rdfs:subClassOf " + " ".join([":" + v for v in values]) + "} . "
-        def _sparql_set_in(node, values):
-            return "FILTER ( ?" + node + " IN (" + ", ".join([":" + v for v in values]) + ") ) . "
+        def _sparql_set_in(node, values, sep=None):
+            if not sep:
+                sep = ""
+            return "FILTER ( ?" + node + " IN (" + ", ".join([sep + v for v in values]) + ") ) . "
         querypt1 = ("SELECT DISTINCT ?s ?p ?o WHERE {\n"
                     "?s ?p ?o . ")
         querypt2 = "}"
@@ -722,22 +727,27 @@ class OntoEditor:
         query_nodes_dict: dict={}
         if classes:
             for node in ["s", "o"]:
-                querypt_classes = "?s ?p ?o . \n" + _sparql_set_in(node, classes)
-                querypt_instances = "?" + node + " a/rdfs:subClassOf* ?" + node +\
-                                    "class . \n" + _sparql_set_in(node+"class", classes)
+                querypt_classes = "?s ?p ?o . \n" + _sparql_set_in(node, classes, ":")
+                querypt_instances = "{\n?" + node + " a/rdfs:subClassOf* ?" + node +\
+                                    "class . \n" + _sparql_set_in(node+"class", classes, ":") +\
+                                    "\n} UNION {\n?s ?p ?o . \nFILTER NOT EXISTS {?" + node +\
+                                    " a ?" + node + "p . }\nFILTER NOT EXISTS {?" + node +\
+                                    " rdfs:subClassOf ?" + node + "p . } \n}\nMINUS {\n?s ?p ?o . \n" +\
+                                    _sparql_set_in(node, nodes_to_be_ignored) + "\n}"
                 query_nodes_dict[node] = "{\n" + querypt_classes + "\n} UNION {\n" +\
-                                        querypt_instances + "\n}"
+                                         querypt_instances + "\n}"
             querypt_nodes = "\n".join(query_nodes_dict.values())
         else:
             querypt_nodes = ""
         query_rel_lim = ""
         if focusnode and radius:
-            assert radius <= 23, "max radius violated"
+            assert radius <= max_radius, "max radius violated"
             if properties:
                 rels = properties
             else:
-                rels = self.onto.properties()
-            query_rel_lim = ":" + focusnode + " " + "?/".join(["(rdf:type|rdfs:subClassOf|:" + "|:".join(rels) + ")"]*radius) + "? ?o . "
+                rels = [p.name for p in self.onto.properties()]
+            query_rel_lim = ":" + focusnode + " " + "?/".join(["(rdf:type|rdfs:subClassOf|:" +\
+                                                               "|:".join(rels) + ")"]*radius) + "? ?o . "
         elif focusnode and not radius or not focusnode and radius:
             logger.warning("focus: both a focusnode and a radius must be specified - ignoring the focus")
         return "\n".join([querypt1, querypt_rels, querypt_nodes, query_rel_lim, querypt2])

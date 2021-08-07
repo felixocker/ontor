@@ -644,27 +644,40 @@ class OntoEditor:
         return triple
 
     @staticmethod
-    def _df_to_nx_incl_labels(df: pd.DataFrame) -> nx.MultiDiGraph:
+    def _df_to_nx_incl_labels(df: pd.DataFrame, coloring: dict) -> nx.MultiDiGraph:
+        """ turns a pandas dataframe into a networkx graph
+
+        :param df: pandas df with spo-triples
+        :param coloring: dict with colors as keys and lists of nodes as values
+        :return: nxgraph for the ontology including labels and coloring
+        """
         nxgraph = nx.from_pandas_edgelist(df, source="subject", target="object",\
                                           edge_attr="predicate", create_using=nx.MultiDiGraph())
         # manually set predicates as labels
         for e in nxgraph.edges.items():
             e[1]["label"] = e[1].pop("predicate")
+        # assert that a node may not have more than one color
+        assert not set(list(coloring.values())[0]).intersection(*list(coloring.values())),\
+            "Several colors specified for one node"
+        for n in nxgraph.nodes.items():
+            for color in coloring.keys():
+                if n[0] in coloring[color]:
+                    n[1]["color"] = color
         return nxgraph
 
-    def _ntriples_to_nx(self) -> nx.MultiDiGraph:
+    def _ntriples_to_df(self) -> nx.MultiDiGraph:
         self.export_ntriples()
         f = open(self.filename.rsplit(".", 1)[0] + ".nt", "r")
         lines = f.readlines()
         df = pd.DataFrame(columns=["subject", "predicate", "object"])
         for rownum, row in enumerate(lines):
             df.loc[rownum] = self._remove_nt_brackets(row.rsplit(".", 1)[0].split(" ")[:3])
-        return self._df_to_nx_incl_labels(df)
+        return df
 
-    def _query_results_to_nx(self, query_results: list) -> nx.MultiDiGraph:
+    def _query_results_to_df(self, query_results: list) -> nx.MultiDiGraph:
         clean_data = [[str(elem).split("#")[-1] for elem in row] for row in query_results]
         df = pd.DataFrame(clean_data, columns=['subject', 'predicate', 'object'])
-        return self._df_to_nx_incl_labels(df)
+        return df
 
     def _plot_nxgraph(self, nxgraph: nx.MultiDiGraph, interactive: bool=False) -> None:
         """
@@ -676,6 +689,7 @@ class OntoEditor:
         net.set_options("""
             var options = {
                 "nodes": {
+                    "color": "rgba(153,153,153,1)",
                     "font": {
                     "color": "rgba(52,52,52,1)"
                     }
@@ -757,12 +771,22 @@ class OntoEditor:
 
         :param classes: list of classes to be included in plot
         :param properties: list of properties to be included in plot
-        :param radius: maximum number of relations between a node and a node of one of the classes specified
+        :param radius: maximum number of relations between a node and a node of
+            one of the classes specified
         :return: None
         """
+
+        # graph coloring settings; note that literals default to grey
+        classcolor = "#0065bd"
+        instancecolor = "#98c6ea"
+        coloring = {}
+        coloring[classcolor] = [c.name for c in self.onto.classes()]
+        coloring[instancecolor] = [i.name for i in self.onto.individuals()]
+
         if not classes and not properties and not focusnode and not radius:
-            nxgraph = self._ntriples_to_nx()
+            graphdata = self._ntriples_to_df()
         else:
             query_results = self.query_onto(self._build_query(self._config_plot_query_body(classes, properties, focusnode, radius)))
-            nxgraph = self._query_results_to_nx(query_results)
+            graphdata = self._query_results_to_df(query_results)
+        nxgraph = self._df_to_nx_incl_labels(graphdata, coloring)
         self._plot_nxgraph(nxgraph)

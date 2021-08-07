@@ -714,16 +714,20 @@ class OntoEditor:
             net.show_buttons()
         net.show(self.filename.rsplit(".", 1)[0] + ".html")
 
-    def _config_plot_query_body(self, classes: list=[], properties: list=[], focusnode: str=None, radius: int=None) -> str:
-        """
+    def _config_plot_query_body(self, classes: list=[], properties: list=[], focusnode: str=None,
+                                radius: int=None, include_class_res: bool=True) -> str:
+        """ configure body for SPARQL query that identifies triples for plot
+
         :param classes: classes to be returned including their instances
         :param properties: properties to be returned
         :param focusnode: node whose environment shall be displayed
         :param radius: maximum distance, i.e., relations, between a node and focusnode
+        :param include_class_res: also return simplified spo-triples for class
+            restrictions if True
         :return: body for query
         """
         max_radius = 5
-        nodes_to_be_ignored = ["owl:Class", "owl:Thing", "owl:NamedIndividual"]
+        nodes_to_be_ignored = ["owl:Class", "owl:Thing", "owl:NamedIndividual", "owl:Restriction"]
 
         def _sparql_set_values(node, values):
             return "VALUES ?" + node + " {rdf:type rdfs:subClassOf " + " ".join([":" + v for v in values]) + "} . "
@@ -731,24 +735,33 @@ class OntoEditor:
             if not sep:
                 sep = ""
             return "FILTER ( ?" + node + " IN (" + ", ".join([sep + v for v in values]) + ") ) . "
-        querypt1 = ("SELECT DISTINCT ?s ?p ?o WHERE {\n"
-                    "?s ?p ?o . ")
+        querypt_class_rels = ("?s rdfs:subClassOf | owl:equivalentClass ?res . \n"
+                              "?res a owl:Restriction . \n"
+                              "?res owl:onProperty ?p . \n"
+                              "?res owl:onClass | owl:someValuesFrom | owl:allValuesFrom | owl:hasValue ?o . ")
+        querypt1 = "SELECT DISTINCT ?s ?p ?o WHERE {\n"
+        if include_class_res:
+            # NOTE: only atomic axioms are currently supported
+            querypt1 += "{\n?s ?p ?o . \n} UNION {\n" + querypt_class_rels + "\n}"
+        else:
+            querypt1 += "?s ?p ?o . \n"
         querypt2 = "}"
         if properties:
             querypt_rels = _sparql_set_values("p", properties)
         else:
             querypt_rels = ""
-        query_nodes_dict: dict={}
         if classes:
+            query_nodes_dict: dict={}
             for node in ["s", "o"]:
                 querypt_classes = "?s ?p ?o . \n" + _sparql_set_in(node, classes, ":")
+                querypt_class_res = querypt_class_rels + "\n" + _sparql_set_in(node, classes, ":")
                 querypt_instances = "{\n?" + node + " a/rdfs:subClassOf* ?" + node +\
                                     "class . \n" + _sparql_set_in(node+"class", classes, ":") +\
                                     "\n} UNION {\n?s ?p ?o . \nFILTER NOT EXISTS {?" + node +\
                                     " a ?" + node + "p . }\nFILTER NOT EXISTS {?" + node +\
-                                    " rdfs:subClassOf ?" + node + "p . } \n}\nMINUS {\n?s ?p ?o . \n" +\
-                                    _sparql_set_in(node, nodes_to_be_ignored) + "\n}"
+                                    " rdfs:subClassOf ?" + node + "p . } \n}"
                 query_nodes_dict[node] = "{\n" + querypt_classes + "\n} UNION {\n" +\
+                                         querypt_class_res + "\n} UNION {\n" +\
                                          querypt_instances + "\n}"
             querypt_nodes = "\n".join(query_nodes_dict.values())
         else:
@@ -764,7 +777,12 @@ class OntoEditor:
                                                                "|:".join(rels) + ")"]*radius) + "? ?o . "
         elif focusnode and not radius or not focusnode and radius:
             logger.warning("focus: both a focusnode and a radius must be specified - ignoring the focus")
-        return "\n".join([querypt1, querypt_rels, querypt_nodes, query_rel_lim, querypt2])
+        querypt_ignore = ""
+        for node in ["s", "o"]:
+            querypt_ignore += "\nMINUS {\n?s ?p ?o . \n" + _sparql_set_in(node, nodes_to_be_ignored) + "\n}"
+        querypt_ignore += "\nMINUS {\n?s ?p ?o . \n ?o a owl:Restriction . \n}"
+        query_body = "\n".join([querypt1, querypt_rels, querypt_nodes, query_rel_lim, querypt_ignore, querypt2])
+        return query_body
 
     def visualize(self, classes: list=[], properties: list=[], focusnode: str=None, radius: int=None) -> None:
         """ visualize onto as a graph; generates html

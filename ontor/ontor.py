@@ -139,7 +139,10 @@ class OntoEditor:
             sys.exit(1)
 
     def add_import(self, other_path: str) -> None:
-        """load an additional onto"""
+        """ load an additional onto
+
+        :param other_path: path to file of onto to be imported
+        """
         if "file://" in other_path:
             onto_path.extend(list(set(other_path.rsplit("/", 1)[0].\
                              removeprefix("file://")) - set(onto_path)))
@@ -151,13 +154,16 @@ class OntoEditor:
     def save_as(self, new_name: str) -> None:
         """ safe ontology as new file
         helpful, e.g., if multiple ontos were loaded
+
+        :param new_name: filename with which the onto shall be saved
         """
         self.onto.save(file = new_name)
         self.filename = new_name
         self.path = "file://./" + new_name
 
     def export_ntriples(self) -> None:
-        """saves with same filename, but as ntriples"""
+        """ saves with same filename, but as ntriples
+        """
         ntfilename = self.filename.rsplit(".", 1)[0] + ".nt"
         self.onto.save(file = ntfilename, format = "ntriples")
 
@@ -196,7 +202,8 @@ class OntoEditor:
             return list(graph.query(query))
 
     def get_axioms(self) -> list:
-        """
+        """ identify all axioms included in the onto
+
         :return: list of class, op, and dp axioms
         """
         axioms = []
@@ -396,7 +403,8 @@ class OntoEditor:
         self.onto.save(file = self.filename)
 
     def add_instances(self, instance_tuples: list) -> None:
-        """
+        """ add instances and their relations to onto
+
         :param instance_tuples: list of tuples of the form [instance, class,
             property, range, range-type]
         """
@@ -419,12 +427,12 @@ class OntoEditor:
                             val = inst[3]
                     elif ObjectProperty in self.onto[inst[2]].is_a and not inst[4]:
                         val = self.onto[inst[3]]
-                    self.add_instance_relation(my_instance, inst[2], val)
+                    self._add_instance_relation(my_instance, inst[2], val)
                 else:
                     logger.warning(f"unexpected triple: {inst}")
         self.onto.save(file = self.filename)
 
-    def add_instance_relation(self, subj, pred, obj) -> None:
+    def _add_instance_relation(self, subj, pred, obj) -> None:
         if FunctionalProperty in self.onto[pred].is_a:
             setattr(subj, pred, obj)
         else:
@@ -508,12 +516,21 @@ class OntoEditor:
             return [x for x in elems if isinstance(x, Restriction)]
 
     def remove_restrictions_on_class(self, class_name: str) -> None:
+        """ remove all restrictions on a given class
+
+        :param class_name: name of the class for which restrictions shall be removed
+        """
         with self.onto:
             for lst in self.onto[class_name].is_a, self.onto[class_name].equivalent_to:
                 self._remove_restr_from_class_def(lst)
         self.onto.save(file = self.filename)
 
     def remove_restrictions_including_prop(self, prop_name: str) -> None:
+        """ remove class restrictions that include a certain property
+
+        :param prop_name: name of the property for which all class restrictions
+            shall be removed
+        """
         with self.onto:
             for c in self.onto.classes():
                 for lst in c.is_a, c.equivalent_to:
@@ -532,7 +549,8 @@ class OntoEditor:
                 cls_restrictions.remove(r)
 
     def reasoning(self, reasoner: str="hermit", save: bool=False):
-        """
+        """ run reasoner to infer new facts
+
         :param reasoner: reasoner can be eiter hermit or pellet
         :param save: bool - save inferences into original file
         :return: returns list of inconsistent classes, if there are any
@@ -620,7 +638,8 @@ class OntoEditor:
 
     @staticmethod
     def _bool_user_interaction(question: str, info: str=None) -> str:
-        """simple CLI for yes/ no/ quit interaction"""
+        """ simple CLI for yes/ no/ quit interaction
+        """
         answer = {"y": True,
                   "n": False}
         if info:
@@ -715,7 +734,8 @@ class OntoEditor:
         net.show(self.filename.rsplit(".", 1)[0] + ".html")
 
     def _config_plot_query_body(self, classes: list=[], properties: list=[], focusnode: str=None,
-                                radius: int=None, include_class_res: bool=True) -> str:
+                                radius: int=None, include_class_res: bool=True,
+                                show_class_descendants: bool=True) -> str:
         """ configure body for SPARQL query that identifies triples for plot
 
         :param classes: classes to be returned including their instances
@@ -724,10 +744,17 @@ class OntoEditor:
         :param radius: maximum distance, i.e., relations, between a node and focusnode
         :param include_class_res: also return simplified spo-triples for class
             restrictions if True
-        :return: body for query
+        :param show_class_descendants: also explicitly include subclasses of the classes specified
+        :return: body for SPARQL query
         """
         max_radius = 5
         nodes_to_be_ignored = ["owl:Class", "owl:Thing", "owl:NamedIndividual", "owl:Restriction"]
+
+        if show_class_descendants:
+            descendent_lists = [[desc.name for desc in self.onto[c].descendants()] for c in classes]
+            subclasses = list(set([c for sublist in descendent_lists for c in sublist]))
+        else:
+            subclasses = classes
 
         def _sparql_set_values(node, values):
             return "VALUES ?" + node + " {rdf:type rdfs:subClassOf " + " ".join([":" + v for v in values]) + "} . "
@@ -753,8 +780,8 @@ class OntoEditor:
         if classes:
             query_nodes_dict: dict={}
             for node in ["s", "o"]:
-                querypt_classes = "?s ?p ?o . \n" + _sparql_set_in(node, classes, ":")
-                querypt_class_res = querypt_class_rels + "\n" + _sparql_set_in(node, classes, ":")
+                querypt_classes = "?s ?p ?o . \n" + _sparql_set_in(node, subclasses, ":")
+                querypt_class_res = querypt_class_rels + "\n" + _sparql_set_in(node, subclasses, ":")
                 querypt_instances = "{\n?" + node + " a/rdfs:subClassOf* ?" + node +\
                                     "class . \n" + _sparql_set_in(node+"class", classes, ":") +\
                                     "\n} UNION {\n?s ?p ?o . \nFILTER NOT EXISTS {?" + node +\

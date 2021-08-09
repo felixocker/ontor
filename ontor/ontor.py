@@ -548,11 +548,13 @@ class OntoEditor:
             if not prop or prop and r.property == prop:
                 cls_restrictions.remove(r)
 
-    def reasoning(self, reasoner: str="hermit", save: bool=False):
+    def reasoning(self, reasoner: str="hermit", save: bool=False, debug: bool=False):
         """ run reasoner to infer new facts
 
         :param reasoner: reasoner can be eiter hermit or pellet
         :param save: bool - save inferences into original file
+        :param debug: bool - log pellet explanations for inconsistencies; only
+            works with Pellet
         :return: returns list of inconsistent classes, if there are any
         """
         inconsistent_classes = None
@@ -566,11 +568,14 @@ class OntoEditor:
                     if reasoner == "hermit":
                         sync_reasoner_hermit([inf_onto])
                     elif reasoner == "pellet":
+                        # pellet explanations are generated if debug is set to >=2
                         sync_reasoner_pellet([inf_onto], infer_property_values=True,\
-                                             infer_data_property_values=True)
+                                             infer_data_property_values=True, debug=debug+1)
                 inconsistent_classes = list(inf_onto.inconsistent_classes())
             except Exception as exc:
-                print("There was a more complex issue, e.g., with disjoints - check log for traceback")
+                if reasoner != "pellet" or debug != True:
+                    self.reasoning("pellet", False, True)
+                    print("There was a more complex issue, e.g., with disjoints - check log for traceback")
                 logger.error(repr(exc) + "\n" + _indent_log(traceback.format_exc()))
         if inconsistent_classes:
             logger.warning(f"the ontology is inconsistent: {inconsistent_classes}")

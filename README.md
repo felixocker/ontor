@@ -20,13 +20,15 @@ ontor provides a tuple based syntax with JSON and CSV support for ontology editi
 * generate documentation via sphinx using the makefile in docs/: ```make html```
 
 ## demo
+the directory *example/* includes a demo application inspired by [Protégé's Pizzas example](https://protegewiki.stanford.edu/wiki/Protege4Pizzas10Minutes)
+
 interactively debug your ontology\
 in the example: ```ontor3.debug_onto()```
 
 <img src="docs/debug.gif" width="500"/>
 
-visualize selected classes and properties within a radius of two relations around the node "felix"\
-in the example: ```ontor3.visualize(["human", "computer"], ["owns", "ops2"], "felix", 2)```
+visualize selected classes and properties within a radius of two relations around the node "John"\
+in the example: ```ontor3.visualize(classes=["human", "pizza"], properties=["likes", "diameter_in_cm"], focusnode="John", radius=2)```
 
 <img src="docs/visualize.png" alt="visualize selected ontology parts" width="500"/>
 

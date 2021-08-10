@@ -25,16 +25,20 @@ def create_first_onto():
     iri = "http://example.org/onto-ex.owl"
     fname = "./onto-ex.owl"
     classes = [["human", None, None, None, None, None, None],\
-               ["computer", None, None, None, None, None, None],\
-               ["process", None, None, None, None, None, None]]
-    ops = [["owns", None, None, "computer", False, False, False, False, False, False, False, None]]
-    dps = [["clock_rate", None, False, "computer", "float", None, None, None, None, None],
-           ["pixel_width", None, False, "computer", "integer", None, None, None, None, None],
-           ["description", None, False, "computer", "string", None, None, None, None, None]]
-    axs = [["human", None, "owns", "some", None, "computer", None, None, None, None, None, None, False]]
-    ins = [["felix", "human", None, None, None],\
-           ["x1", "computer", None, None, None],\
-           ["felix", "human", "owns", "x1", None]]
+               ["vegetarian", "human", None, None, None, None, None],\
+               ["food", None, None, None, None, None, None],\
+               ["pizza", "food", None, None, None, None, None],\
+               ["pizza_base", "food", None, None, None, None, None],\
+               ["pizza_topping", "food", None, None, None, None, None],\
+               ["margherita", "pizza", None, None, None, None, None]]
+    ops = [["likes", None, "human", None, False, False, False, False, False, False, False, None]]
+    dps = [["diameter_in_cm", None, True, "pizza", "integer", None, None, None, None, None],
+           ["weight_in_grams", None, True, "pizza", "float", None, None, None, None, None],
+           ["description", None, False, "food", "string", None, None, None, None, None]]
+    axs = [["human", None, "likes", "some", None, "food", None, None, None, None, None, None, False]]
+    ins = [["John", "vegetarian", None, None, None],\
+           ["His_pizza", "margherita", None, None, None],\
+           ["John", "vegetarian", "likes", "His_pizza", None]]
     ontor1 = ontor.OntoEditor(iri, fname)
     ontor1.add_axioms(classes)
     ontor1.add_ops(ops)
@@ -45,69 +49,83 @@ def create_first_onto():
 def create_second_onto():
     iri = "http://example.org/onto-ex-add.owl"
     fname = "./onto-ex-add.owl"
-    classes = [["tablet", None, None, None, None, None, None]]
+    classes = [["beverage", None, None, None, None, None, None],
+               ["water", "beverage", None, None, None, None, None]]
     ontor2 = ontor.OntoEditor(iri, fname)
     ontor2.add_axioms(classes)
 
-def modify_onto(break_by_disjoint=False):
-    """
-    :param break_by_disjoint: if True disjoints are added that the reasoner cannot handle
-    """
-    classes = [["test", "human", None, None, None, None, None],\
+def modify_onto():
+    classes = [["company", None, None, None, None, None, None],\
+               ["pizza_company", "company", None, None, None, None, False],\
+               ["margherita_company", "pizza_company", None, None, None, None, False],\
                [None, None, None, None, None, None, None],\
-               ["test2", "test", None, None, None, None, False],\
-               ["somecompany", "test", None, None, None, None, False]]
-    ins = [["testinstance", "human", "owns", "x1", None],\
-           ["ti2", None, None, None, None],\
-           ["x1", "computer", "clock_rate", "3.1", "float"],\
-           ["x1", "computer", "pixel_width", "1920", "integer"],\
-           ["x1", "computer", "description", "my personal x1", "string"],\
-           ["x1", "computer", "owns", "x1", None]]
+               ["quattro_stagioni", "pizza", None, None, None, None, False]]
+    ins = [["Her_pizza", "quattro_stagioni", None, None, None],\
+           ["Jane", "human", "likes", "Her_pizza", None],\
+           ["Faulty_pizza", None, None, None, None],\
+           ["Her_pizza", "quattro_stagioni", "weight_in_grams", "430.0", "float"],\
+           ["Her_pizza", "quattro_stagioni", "diameter_in_cm", "32", "integer"],\
+           ["Her_pizza", "quattro_stagioni", "description", "jane's pizza", "string"]]
+    axs = [["pizza_company", "company", "produces", "some", None, "pizza", None, None, None, None, None, None, False],
+           ["pizza_company", "company", "likes", "some", None, "food", None, None, None, None, None, None, False]]
     ontor3 = ontor.OntoEditor("http://example.org/onto-ex.owl", "./onto-ex.owl")
     ontor3.add_axioms(classes)
-    print(list(elem for elem in ontor3.get_elems()[0]))
+    # print(list(elem for elem in ontor3.get_elems()[0]))
     ontor3.add_ops(ontor.load_json("./data/props.json")["op"])
-    print(list(elem for elem in ontor3.get_elems()[0]))
+    # print(list(elem for elem in ontor3.get_elems()[0]))
     ontor3.add_dps(ontor.load_json("./data/props.json")["dp"])
-    print(list(elem for elem in ontor3.get_elems()[0]))
+    # print(list(elem for elem in ontor3.get_elems()[0]))
     ontor3.add_instances(ins)
-    print(list(elem for elem in ontor3.get_elems()[0]))
+    # print(list(elem for elem in ontor3.get_elems()[0]))
     ontor3.add_axioms(ontor.load_csv("./data/class_axioms.csv"))
-    print(*ontor3.get_axioms()[0], sep="\n")
+    # print(*ontor3.get_axioms()[0], sep="\n")
+    ontor3.add_axioms(axs)
 
-    ontor3.add_distinctions([["classes", ["human", "process"]]])
+    ontor3.add_distinctions([["classes", ["human", "pizza"]],
+                             ["classes", ["has_base", "has_topping"]]])
 
-    if break_by_disjoint:
-        ontor3.add_distinctions([["classes", ["ops1", "ops2", "ops3"]],\
-                                 ["classes", ["human", "computer"]],\
-                                 ["instances", ["felix", "x1"]]])
-
-    print(*ontor3.get_axioms(), sep="\n")
+    # print(*ontor3.get_axioms(), sep="\n")
     ontor3.add_import("file://./onto-ex-add.owl")
-#    ontor3.save_as("test.owl")
-
-#    ontor3.remove_restrictions_on_class("test2")
+    # ontor3.save_as("test.owl")
 
     print("inconsistent classes")
     print(ontor3.reasoning("hermit", False))
     print("debugging")
     ontor3.debug_onto(assume_correct_taxo=False)
 
-    # # removing restrictions
-    # print(ontor3.get_class_restrictions("test2"))
-    # ontor3.remove_restrictions_including_prop("owns")
-    # ontor3.remove_restrictions_on_class("test")
-    # ontor3.remove_from_taxo(["test"])
-    # print(ontor3.get_class_restrictions("test2"))
+    # removing objects from the onto
+    # removing restrictions by op - produces
+    ontor3.remove_restrictions_including_prop("produces")
+    _test_rm(ontor3.get_class_restrictions("pizza_company"),\
+            ["onto-ex.likes.some(onto-ex.food)"], "produces restrictions")
+    # removing restrictions by class - pizza_company
+    ontor3.remove_restrictions_on_class("pizza_company")
+    _test_rm(ontor3.get_class_restrictions("pizza_company"),\
+            [], "restrictions on pizza_company")
+    # removing entities - pizza_company
+    ontor3.remove_from_taxo(["pizza_company"])
+    _test_rm(ontor3.get_class_restrictions("margherita_company", res_only= False),\
+            ["onto-ex.company"], "pizza_company")
+    # removing relations - produces
+    ontor3.remove_elements(["produces"])
+    _test_rm(ontor3.get_elems()[1],\
+            ["onto-ex.likes", "onto-ex.part", "onto-ex.has_base", "onto-ex.has_topping"],\
+            "produces")
 
-    # # removing entities
-    # print([elem for elem in ontor3.get_elems()[1]])
-    # ontor3.remove_elements(["ops1"])
-    # print([elem for elem in ontor3.get_elems()[1]])
+    ontor3.visualize(classes=["human", "pizza"], properties=["likes", "diameter_in_cm"],\
+                     focusnode="John", radius=2)
 
-    # ontor3.export_ntriples()
-    # ontor3.visualize()
-    ontor3.visualize(classes=["human","computer"], properties=["owns", "pixel_width"], focusnode="felix", radius=2)
+def _test_rm(as_is: list, as_expected: list, elem: str) -> None:
+    """ check whether remove function worked as expected
+
+    :param as_is: current elements
+    :param as_expected: elements expected after modification
+    """
+    as_is = [str(e) for e in as_is]
+    if set(as_is) == set(as_expected):
+        print(f"successfully removed {elem} (reparented subclasses and instances if applicable)")
+    else:
+        print(f"removing {elem} failed")
 
 def check_import():
     ontor4 = ontor.OntoEditor("http://example.org/onto-ex.owl", "./onto-ex.owl", ["."])

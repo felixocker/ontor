@@ -498,10 +498,12 @@ class OntoEditor:
                 destroy_entity(self.onto[elem])
         self.onto.save(file = self.filename)
 
-    def get_class_restrictions(self, class_name: str, res_type="is_a") -> list:
+    def get_class_restrictions(self, class_name: str, res_only: bool=True, res_type: str="is_a") -> list:
         """ retrieve restrictions on specific class by restriction type
 
         :param class_name: name of the class for which restrictions shall be returned
+        :param res_only: only returns Restrictions if set to True, if set to False
+            parent class(es) are also included
         :param res_type: restriction type, either is_a or equivalent_to
         :return: list of restrictions on class
         """
@@ -513,7 +515,9 @@ class OntoEditor:
             else:
                 logger.warning(f"unexpected res_type: {res_type}")
                 sys.exit(1)
-            return [x for x in elems if isinstance(x, Restriction)]
+            if res_only:
+                elems = [x for x in elems if isinstance(x, Restriction)]
+            return elems
 
     def remove_restrictions_on_class(self, class_name: str) -> None:
         """ remove all restrictions on a given class

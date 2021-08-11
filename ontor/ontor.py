@@ -247,7 +247,8 @@ class OntoEditor:
                     logger.warning(f"unexpected input: {axiom}")
         self.onto.save(file = self.filename)
 
-    def _add_restr_to_def(self, current_axioms: list, resinfo: list, opinfo: list, dpinfo: list, axiom: list) -> None:
+    def _add_restr_to_def(self, current_axioms: list, resinfo: list, opinfo: list,
+                          dpinfo: list, axiom: list) -> None:
         """
         :param current_axioms: list of an element's current axioms - equivalent_to or is_a
         :param resinfo: list with general restriction info [prop, p_type, cardin]
@@ -269,7 +270,8 @@ class OntoEditor:
                 return
             if resinfo[1] in ["exactly", "max", "min"]:
                 # NOTE: this may be resolved in future versions of Owlready2
-                logger.warning(f"qualified cardinality restrictions currently not supported for DPs: {axiom}")
+                logger.warning(f"qualified cardinality restrictions currently not "
+                                "supported for DPs: {axiom}")
                 return
         else:
             logger.warning(f"restriction includes both op and dp: {axiom}")
@@ -337,11 +339,9 @@ class OntoEditor:
         """
         indices = [x for x, _ in enumerate(values)]
         assert all([x in indices for x in expected_values]), "invalid expected_values"
-        if all([values[i] for i in expected_values]) and\
-           not any([values[i] for i in [e for e in indices if not e in expected_values]]):
-            return True
-        else:
-            return False
+        test = all([values[i] for i in expected_values]) and\
+               not any([values[i] for i in [e for e in indices if not e in expected_values]])
+        return bool(test)
 
     def add_ops(self, op_tuples: list) -> None:
         """ add object properties including their axioms to onto
@@ -577,7 +577,7 @@ class OntoEditor:
                                              infer_data_property_values=True, debug=debug+1)
                 inconsistent_classes = list(inf_onto.inconsistent_classes())
             except Exception as exc:
-                if reasoner != "pellet" or debug != True:
+                if reasoner != "pellet" or not debug:
                     self.reasoning("pellet", False, True)
                     print("There was a more complex issue, e.g., with disjoints - check log for traceback")
                 logger.error(repr(exc) + "\n" + _indent_log(traceback.format_exc()))
@@ -630,7 +630,7 @@ class OntoEditor:
                     for ax in pot_probl_ax[rel][count]:
                         if self._bool_user_interaction("Delete " + rel + " axiom?",\
                                                        ax_msg + ic.name + " " + rel + " " + str(ax)):
-                            if type(ax) == ThingClass:
+                            if isinstance(ax, ThingClass):
                                 getattr(self.onto[ic.name], rel).remove(self.onto[ax.name])
                             else:
                                 getattr(self.onto[ic.name], rel).remove(ax)
@@ -702,7 +702,8 @@ class OntoEditor:
             df.loc[rownum] = self._remove_nt_brackets(row.rsplit(".", 1)[0].split(" ")[:3])
         return df
 
-    def _query_results_to_df(self, query_results: list) -> nx.MultiDiGraph:
+    @staticmethod
+    def _query_results_to_df(query_results: list) -> nx.MultiDiGraph:
         clean_data = [[str(elem).split("#")[-1] for elem in row] for row in query_results]
         df = pd.DataFrame(clean_data, columns=['subject', 'predicate', 'object'])
         return df
@@ -742,8 +743,8 @@ class OntoEditor:
             net.show_buttons()
         net.show(self.filename.rsplit(".", 1)[0] + ".html")
 
-    def _config_plot_query_body(self, classes: list=[], properties: list=[], focusnode: str=None,
-                                radius: int=None, include_class_res: bool=True,
+    def _config_plot_query_body(self, classes: list=None, properties: list=None,
+                                focusnode: str=None, radius: int=None, include_class_res: bool=True,
                                 show_class_descendants: bool=True) -> str:
         """ configure body for SPARQL query that identifies triples for plot
 
@@ -820,7 +821,7 @@ class OntoEditor:
         query_body = "\n".join([querypt1, querypt_rels, querypt_nodes, query_rel_lim, querypt_ignore, querypt2])
         return query_body
 
-    def visualize(self, classes: list=[], properties: list=[], focusnode: str=None, radius: int=None) -> None:
+    def visualize(self, classes: list=None, properties: list=None, focusnode: str=None, radius: int=None) -> None:
         """ visualize onto as a graph; generates html
 
         :param classes: list of classes to be included in plot
@@ -840,7 +841,8 @@ class OntoEditor:
         if not classes and not properties and not focusnode and not radius:
             graphdata = self._ntriples_to_df()
         else:
-            query_results = self.query_onto(self._build_query(self._config_plot_query_body(classes, properties, focusnode, radius)))
+            query_body = self._config_plot_query_body(classes, properties, focusnode, radius)
+            query_results = self.query_onto(self._build_query(query_body))
             graphdata = self._query_results_to_df(query_results)
         nxgraph = self._df_to_nx_incl_labels(graphdata, coloring)
         self._plot_nxgraph(nxgraph)

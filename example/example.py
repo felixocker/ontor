@@ -35,7 +35,7 @@ def create_first_onto():
     dps = [["diameter_in_cm", None, True, "pizza", "integer", None, None, None, None, None],
            ["weight_in_grams", None, True, "pizza", "float", None, None, None, None, None],
            ["description", None, False, "food", "string", None, None, None, None, None]]
-    axs = [["human", None, "likes", "some", None, "food", None, None, None, None, None, None, False]]
+    axs = [["human", None, "likes", None, "some", None, "food", None, None, None, None, None, None, None, False]]
     ins = [["John", "vegetarian", None, None, None],\
            ["His_pizza", "margherita", None, None, None],\
            ["John", "vegetarian", "likes", "His_pizza", None]]
@@ -66,8 +66,8 @@ def modify_onto():
            ["Her_pizza", "quattro_stagioni", "weight_in_grams", "430.0", "float"],\
            ["Her_pizza", "quattro_stagioni", "diameter_in_cm", "32", "integer"],\
            ["Her_pizza", "quattro_stagioni", "description", "jane's pizza", "string"]]
-    axs = [["pizza_company", "company", "produces", "some", None, "pizza", None, None, None, None, None, None, False],
-           ["pizza_company", "company", "likes", "some", None, "food", None, None, None, None, None, None, False]]
+    axs = [["pizza_company", "company", "produces", None, "some", None, "pizza", None, None, None, None, None, None, None, False],
+           ["pizza_company", "company", "likes", None, "some", None, "food", None, None, None, None, None, None, None, False]]
     ontor3 = ontor.OntoEditor("http://example.org/onto-ex.owl", "./onto-ex.owl")
     ontor3.add_axioms(classes)
     # print(list(elem for elem in ontor3.get_elems()[0]))

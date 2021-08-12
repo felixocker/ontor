@@ -39,7 +39,8 @@ from owlready2 import default_world, destroy_entity, get_ontology, onto_path, ty
                       World, Restriction, ConstrainedDatatype,\
                       FunctionalProperty, InverseFunctionalProperty,\
                       TransitiveProperty, SymmetricProperty, AsymmetricProperty,\
-                      ReflexiveProperty, IrreflexiveProperty, ThingClass
+                      ReflexiveProperty, IrreflexiveProperty, ThingClass,\
+                      Not, Inverse
 from pyvis.network import Network
 
 import queries
@@ -219,8 +220,9 @@ class OntoEditor:
         NOTE: complex axioms, i.e., intersections and unions, are currently not supported
 
         :param axiom_tuples: list of tuples of the form [class, superclass, property,
-            cardinality type, cardinality, op-object, dp-range, dp-min-ex, dp-min-in,
-            dp-exact, dp-max-in, dp-max-ex, equivalence(bool)]
+            inverted(bool), cardinality type, cardinality, op-object, dp-range,
+            dp-min-ex, dp-min-in, dp-exact, dp-max-in, dp-max-ex, negated(bool),
+            equivalence(bool)]
         """
         with self.onto:
             for axiom in axiom_tuples:
@@ -233,16 +235,16 @@ class OntoEditor:
                     my_class = types.new_class(axiom[0], (Thing, ))
                 else:
                     logger.warning(f"no class defined: {axiom}")
-                if not axiom[2] and not axiom[3] and not axiom[4] and not axiom[5]:
+                if not axiom[2] and not axiom[4] and not axiom[5] and not axiom[6]:
                     continue
-                if all([axiom[i] for i in [2,3,5]]) or all([axiom[i] for i in [2,3,6]]):
+                if all([axiom[i] for i in [2,4,6]]) or all([axiom[i] for i in [2,4,7]]):
                     if axiom[-1]:
                         current_axioms = my_class.equivalent_to
                     else:
                         current_axioms = my_class.is_a
                     self._add_restr_to_def(current_axioms, [self.onto[axiom[2]],\
-                                           axiom[3], axiom[4]], [self.onto[axiom[5]]],\
-                                           axiom[6:12], axiom)
+                                           axiom[3], axiom[4], axiom[5], axiom[13]],\
+                                           [self.onto[axiom[6]]], axiom[7:13], axiom)
                 else:
                     logger.warning(f"unexpected input: {axiom}")
         self.onto.save(file = self.filename)
@@ -251,7 +253,8 @@ class OntoEditor:
                           dpinfo: list, axiom: list) -> None:
         """
         :param current_axioms: list of an element's current axioms - equivalent_to or is_a
-        :param resinfo: list with general restriction info [prop, p_type, cardin]
+        :param resinfo: list with general restriction info [prop, inverted, p_type,
+            cardin, negated]
         :param opinfo: list with op restriction info [op-object]
         :param dpinfo: list with dp restriction info [dprange, minex, minin,
             exact, maxin, maxex]
@@ -261,14 +264,17 @@ class OntoEditor:
             obj = opinfo[0]
         elif not any(opinfo) and any(dpinfo):
             obj = None
-            if resinfo[1] in ["some", "only"]:
+            if resinfo[1]:
+                logger.warning(f"invalid dp constraint - dp may not be inverted: {axiom}")
+                return
+            if resinfo[2] in ["some", "only"]:
                 obj = self._dp_constraint(dpinfo)
-            elif resinfo[1] in ["value"] and dpinfo[3]:
+            elif resinfo[2] in ["value"] and dpinfo[3]:
                 obj = self._dp_range_types[dpinfo[0]](dpinfo[3])
             if obj is None:
                 logger.warning(f"invalid dp constraint: {axiom}")
                 return
-            if resinfo[1] in ["exactly", "max", "min"]:
+            if resinfo[2] in ["exactly", "max", "min"]:
                 # NOTE: this may be resolved in future versions of Owlready2
                 logger.warning(f"qualified cardinality restrictions currently not "
                                 "supported for DPs: {axiom}")
@@ -276,12 +282,18 @@ class OntoEditor:
         else:
             logger.warning(f"restriction includes both op and dp: {axiom}")
             return
-        if resinfo[1] in ["some", "only", "value"] and not resinfo[2]:
-            current_axioms.append(getattr(resinfo[0], resinfo[1])(obj))
-        elif resinfo[1] in ["exactly", "max", "min"] and resinfo[2]:
-            current_axioms.append(getattr(resinfo[0], resinfo[1])(resinfo[2], obj))
+        if resinfo[1]:
+            resinfo[0] = Inverse(resinfo[0])
+        if resinfo[2] in ["some", "only", "value"] and not resinfo[3]:
+            res = getattr(resinfo[0], resinfo[2])(obj)
+        elif resinfo[2] in ["exactly", "max", "min"] and resinfo[3]:
+            res = getattr(resinfo[0], resinfo[2])(resinfo[3], obj)
         else:
             logger.warning(f"unexpected cardinality definition: {axiom}")
+            return
+        if resinfo[4]:
+            res = Not(res)
+        current_axioms.append(res)
 
     def _dp_constraint(self, dpres: list):
         """
@@ -417,7 +429,8 @@ class OntoEditor:
                 if not any(inst[2:]):
                     continue
                 if inst[2] and inst[3]:
-                    if DataProperty in self.onto[inst[2]].is_a:
+                    pred = self.onto[inst[2]]
+                    if DataProperty in pred.is_a:
                         if inst[4] and not inst[4] in self._dp_range_types:
                             logger.warning(f"unexpected DP range: {inst}")
                         elif inst[4]:
@@ -425,18 +438,18 @@ class OntoEditor:
                         else:
                             logger.warning(f"DP range undefined - defaulting to string: {inst}")
                             val = inst[3]
-                    elif ObjectProperty in self.onto[inst[2]].is_a and not inst[4]:
+                    elif ObjectProperty in pred.is_a and not inst[4]:
                         val = self.onto[inst[3]]
-                    self._add_instance_relation(my_instance, inst[2], val)
+                    self._add_instance_relation(my_instance, pred, val)
                 else:
                     logger.warning(f"unexpected triple: {inst}")
         self.onto.save(file = self.filename)
 
     def _add_instance_relation(self, subj, pred, obj) -> None:
-        if FunctionalProperty in self.onto[pred].is_a:
-            setattr(subj, pred, obj)
+        if FunctionalProperty in pred.is_a:
+            setattr(subj, pred.name, obj)
         else:
-            getattr(subj, pred).append(obj)
+            getattr(subj, pred.name).append(obj)
 
     def add_distinctions(self, distinct_sets: list) -> None:
         """ make classes disjoint and instances distinct

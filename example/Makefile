@@ -8,11 +8,12 @@ all : example.py
 clean:
 	rm -f *.owl
 	rm -f *.nt
-	rm -f *.log
+	find ../ -name "*.log" -type f -delete
 	rm -f *.xml
 	rm -f *.html
 	rm -rf __pycache__/
-	find ../ontor -name __pycache__ -exec rm -rf {} \;
+	find ../ontor -name "__pycache__" -exec rm -rf {} \;
+	rm -rf ../docs/build
 
 ## help			: Return help info.
 .PHONY : help

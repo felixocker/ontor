@@ -109,7 +109,7 @@ class OntoEditor:
                        "time": datetime.time,
                        "datetime": datetime.datetime}
 
-    def __init__(self, iri: str, path: str, import_paths: list=None):
+    def __init__(self, iri: str, path: str, import_paths: list=None) -> None:
         """ tries to load onto from file specified, creates new file if none is available
 
         :param iri: ontology's IRI
@@ -123,11 +123,12 @@ class OntoEditor:
         onto_path.extend(list(set(path.rsplit("/", 1)[0]) - set(onto_path)))
         if import_paths:
             onto_path.extend(list(set(import_paths) - set(onto_path)))
+        self.onto_world = World()
         try:
-            self.onto = get_ontology(self.path).load()
+            self.onto = self.onto_world.get_ontology(self.path).load()
             logger.info("successfully loaded ontology specified")
         except:
-            self.onto = get_ontology(self.iri)
+            self.onto = self.onto_world.get_ontology(self.iri)
             self.onto.save(file = self.filename)
             logger.info("ontology file did not exist - created a new one")
 
@@ -199,7 +200,7 @@ class OntoEditor:
         :return: query results as list
         """
         with self.onto:
-            graph = default_world.as_rdflib_graph()
+            graph = self.onto_world.as_rdflib_graph()
             return list(graph.query(query))
 
     def get_axioms(self) -> list:
@@ -565,16 +566,16 @@ class OntoEditor:
             if not prop or prop and r.property == prop:
                 cls_restrictions.remove(r)
 
-    def reasoning(self, reasoner: str="hermit", save: bool=False, debug: bool=False):
-        """ run reasoner to infer new facts
+    def reasoning(self, reasoner: str="hermit", save: bool=False, debug: bool=False) -> list:
+        """ run reasoner to check consistency and infer new facts
 
         :param reasoner: reasoner can be eiter hermit or pellet
         :param save: bool - save inferences into original file
         :param debug: bool - log pellet explanations for inconsistencies; only
             works with Pellet
-        :return: returns list of inconsistent classes, if there are any
+        :return: returns list of inconsistent classes if there are any
         """
-        inconsistent_classes = None
+        inconsistent_classes = []
         # add temporary world for inferences
         inferences = World()
         self._check_reasoner(reasoner)
@@ -656,7 +657,7 @@ class OntoEditor:
         :param restype: type of class restriction, either is_a or equivalent_to
         :return: list of class restrictions for inconsistent_classes - does not return parent classes
         """
-        return [self.get_class_restrictions(ic.name, restype) for ic in inconsistent_classes]
+        return [self.get_class_restrictions(ic.name, res_only=True, res_type=restype) for ic in inconsistent_classes]
 
     @staticmethod
     def _bool_user_interaction(question: str, info: str=None) -> str:

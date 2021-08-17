@@ -27,6 +27,7 @@ import logging
 import networkx as nx
 import os
 import pandas as pd
+import re
 import sys
 import textwrap
 import traceback
@@ -591,24 +592,60 @@ class OntoEditor:
                                              infer_data_property_values=True, debug=debug+1)
                 inconsistent_classes = list(inf_onto.inconsistent_classes())
             except Exception as exc:
-                if reasoner != "pellet" or not debug:
-                    self.reasoning("pellet", False, True)
-                    print("There was a more complex issue, e.g., with disjoints - check log for traceback")
-                logger.error(repr(exc) + "\n" + _indent_log(traceback.format_exc()))
+                if reasoner == "pellet" and debug:
+                    inconsistent_classes = self._analyze_pellet_results(exc)
+                else:
+                    inconsistent_classes = self.reasoning("pellet", False, True)
         if inconsistent_classes:
             logger.warning(f"the ontology is inconsistent: {inconsistent_classes}")
-            inconsistent_classes.remove(Nothing)
-            return inconsistent_classes
-        if save and not inconsistent_classes:
+            if Nothing in inconsistent_classes:
+                inconsistent_classes.remove(Nothing)
+        elif save and not inconsistent_classes:
             inf_onto.save(file = self.filename)
             self._reload_from_file()
-        return None
+        return inconsistent_classes
 
     @staticmethod
     def _check_reasoner(reasoner: str) -> None:
         reasoners = ["hermit", "pellet"]
         if reasoner not in reasoners:
             logger.warning(f"unexpected reasoner: {reasoner} - available reasoners: {reasoners}")
+
+    def _analyze_pellet_results(self, exc: Exception) -> list:
+        """ analyze the explanation returned by Pellet, print it and return
+        inconsistent classes
+        IDEA: also consider restrictions on properties and facts about instances
+
+        :param exc: exception thrown during reasoning process
+        :return: list of classes identified as problematic
+        """
+        inconsistent_classes = []
+        logger.error(repr(exc))
+        expl = self._extract_pellet_explanation(traceback.format_exc())
+        if expl[0]:
+            print("Pellet provides the following explanation(s):")
+            print(*expl[0], sep="\n")
+            inconsistent_classes = [self.onto[ax[0]] for ex in expl[1] for ax in ex\
+                                    if self.onto[ax[0]] in self.onto.classes()]
+        else:
+            print("There was a more complex issue, check log for traceback")
+            logger.error(_indent_log(traceback.format_exc()))
+        return list(set(inconsistent_classes))
+
+    @staticmethod
+    def _extract_pellet_explanation(pellet_traceback: str) -> tuple:
+        """ extract reasoner explanation
+
+        :param pellet_traceback: traceback created when running reasoner
+        :return: tuple of entire explanation and list of axioms included in explanation
+        """
+        rex = re.compile("Explanation\(s\): \n(.*?)\n\n", re.DOTALL|re.MULTILINE)
+        res = set(re.findall(rex, pellet_traceback))
+        axioms: list=[]
+        if res:
+            expls = [[l[5:] for l in expl.split("\n")] for expl in res]
+            axioms = [[axiom.split() for axiom in block] for block in expls]
+        return (res, axioms)
 
     def debug_onto(self, reasoner: str="hermit", assume_correct_taxo: bool=True) -> None:
         """ interactively (CLI) fix inconsistencies

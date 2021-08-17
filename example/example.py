@@ -30,7 +30,8 @@ def create_first_onto():
                ["pizza", "food", None, None, None, None, None],\
                ["pizza_base", "food", None, None, None, None, None],\
                ["pizza_topping", "food", None, None, None, None, None],\
-               ["margherita", "pizza", None, None, None, None, None]]
+               ["vegetarian_pizza", "pizza", None, None, None, None, None],\
+               ["margherita", "vegetarian_pizza", None, None, None, None, None]]
     ops = [["likes", None, "human", None, False, False, False, False, False, False, False, None]]
     dps = [["diameter_in_cm", None, True, "pizza", "integer", None, None, None, None, None],
            ["weight_in_grams", None, True, "pizza", "float", None, None, None, None, None],
@@ -109,8 +110,8 @@ def modify_onto():
     # removing relations - produces
     ontor3.remove_elements(["produces"])
     _test_rm(ontor3.get_elems()[1],\
-            ["onto-ex.likes", "onto-ex.part", "onto-ex.has_base", "onto-ex.has_topping"],\
-            "produces")
+             ["onto-ex.likes", "onto-ex.part", "onto-ex.has_base", "onto-ex.has_topping"],\
+             "produces")
 
     ontor3.visualize(classes=["human", "pizza"], properties=["likes", "diameter_in_cm"],\
                      focusnode="John", radius=2)

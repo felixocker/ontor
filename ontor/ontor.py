@@ -34,7 +34,7 @@ import traceback
 
 from contextlib import contextmanager
 from io import StringIO
-from owlready2 import default_world, destroy_entity, get_ontology, onto_path, types,\
+from owlready2 import destroy_entity, get_ontology, onto_path, types,\
                       sync_reasoner_hermit, sync_reasoner_pellet, Thing, Nothing,\
                       AllDisjoint, AllDifferent, DataProperty, ObjectProperty,\
                       World, Restriction, ConstrainedDatatype,\
@@ -448,7 +448,8 @@ class OntoEditor:
                     logger.warning(f"unexpected triple: {inst}")
         self.onto.save(file = self.filename)
 
-    def _add_instance_relation(self, subj, pred, obj) -> None:
+    @staticmethod
+    def _add_instance_relation(subj, pred, obj) -> None:
         if FunctionalProperty in pred.is_a:
             setattr(subj, pred.name, obj)
         else:
@@ -656,7 +657,6 @@ class OntoEditor:
             not included, e.g., A rdfs:subClassOf B
         :param reasoner: reasoner to be used for inferences
         """
-        ax_msg = "Potentially inconsistent axiom: "
         self._check_reasoner(reasoner)
         inconsistent_classes = self.reasoning(reasoner=reasoner, save=False)
         if not inconsistent_classes:
@@ -670,23 +670,15 @@ class OntoEditor:
                     sync_reasoner_pellet([debug_onto], infer_property_values=True,\
                                          infer_data_property_values=True, debug=2)
                     # IDEA: further analyze reasoner results to pin down cause of inconsistency
-            rel_types = ["is_a", "equivalent_to"]
             if assume_correct_taxo:
                 pot_probl_ax = {"is_a": self._get_incon_class_res("is_a", inconsistent_classes),
                                 "equivalent_to": self._get_incon_class_res("equivalent_to", inconsistent_classes)}
             else:
                 pot_probl_ax = {"is_a": [self.onto[ic.name].is_a for ic in inconsistent_classes],
                                 "equivalent_to": [self.onto[ic.name].equivalent_to for ic in inconsistent_classes]}
-            for rel in rel_types:
-                for count, ic in enumerate(inconsistent_classes):
-                    for ax in pot_probl_ax[rel][count]:
-                        if self._bool_user_interaction("Delete " + rel + " axiom?",\
-                                                       ax_msg + ic.name + " " + rel + " " + str(ax)):
-                            if isinstance(ax, ThingClass):
-                                getattr(self.onto[ic.name], rel).remove(self.onto[ax.name])
-                            else:
-                                getattr(self.onto[ic.name], rel).remove(ax)
-                            # IDEA: instead of simply deleting axioms, also allow user to edit them
+            ax_msg = "Potentially inconsistent axiom: "
+            for rel in "is_a", "equivalent_to":
+                self._interactively_delete_axs_by_rel(rel, inconsistent_classes, pot_probl_ax, ax_msg)
             self.onto.save(file = self.filename)
             self.debug_onto(reasoner, assume_correct_taxo)
 
@@ -696,6 +688,23 @@ class OntoEditor:
         :return: list of class restrictions for inconsistent_classes - does not return parent classes
         """
         return [self.get_class_restrictions(ic.name, res_only=True, res_type=restype) for ic in inconsistent_classes]
+
+    def _interactively_delete_axs_by_rel(self, rel: str, classes: list, axioms: list, msg: str) -> None:
+        """
+        :param rel: relation between class and axioms - is_a or equivalent_to
+        :param classes: classes for which axioms are to be removed
+        :param axioms: axioms which should be checked for removal
+        :param msg: message to be displayed when prompting user
+        """
+        for count, ic in enumerate(classes):
+            for ax in axioms[rel][count]:
+                if self._bool_user_interaction("Delete " + rel + " axiom?",\
+                                               msg + ic.name + " " + rel + " " + str(ax)):
+                    if isinstance(ax, ThingClass):
+                        getattr(self.onto[ic.name], rel).remove(self.onto[ax.name])
+                    else:
+                        getattr(self.onto[ic.name], rel).remove(ax)
+                    # IDEA: instead of simply deleting axioms, also allow user to edit them
 
     @staticmethod
     def _bool_user_interaction(question: str, info: str=None) -> str:
@@ -792,7 +801,7 @@ class OntoEditor:
 
         if show_class_descendants:
             descendent_lists = [[desc.name for desc in self.onto[c].descendants()] for c in classes]
-            subclasses = list(set([c for sublist in descendent_lists for c in sublist]))
+            subclasses = list({c for sublist in descendent_lists for c in sublist})
         else:
             subclasses = classes
 

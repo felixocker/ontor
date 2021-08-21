@@ -1,5 +1,5 @@
 # ONTology editOR (ontor)
-ontology editor built on Owlready2
+ontology editor built on [Owlready2](https://pypi.org/project/Owlready2/)
 
 ## functionality
 each instance of the ontor class represents an individual ontology and provides support for:
@@ -20,14 +20,14 @@ ontor provides a tuple based syntax with JSON and CSV support for ontology editi
 * generate documentation via sphinx using the makefile in docs/: ```make html```
 
 ## demo
-the directory *example/* includes a demo application inspired by [Protégé's Pizzas example](https://protegewiki.stanford.edu/wiki/Protege4Pizzas10Minutes)
+the directory *example/* includes a demo application inspired by [Protégé's pizza example](https://protegewiki.stanford.edu/wiki/Protege4Pizzas10Minutes)
 
-interactively debug your ontology\
+interactively debug an ontology\
 in the example: ```ontor3.debug_onto()```
 
 <img src="docs/debug.gif" width="500"/>
 
-visualize selected classes and properties within a radius of two relations around the node "John"\
+visualize selected instances, classes, and properties in a given radius around a focus node; e.g., all nodes in a radius of two relations around the node "John"\
 in the example: ```ontor3.visualize(classes=["human", "pizza"], properties=["likes", "diameter_in_cm"], focusnode="John", radius=2)```
 
 <img src="docs/visualize.png" alt="visualize selected ontology parts" width="500"/>

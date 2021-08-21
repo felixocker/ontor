@@ -44,6 +44,7 @@ from owlready2 import default_world, destroy_entity, get_ontology, onto_path, ty
                       Not, Inverse
 from pyvis.network import Network
 
+import config
 import queries
 
 logger = logging.getLogger(__name__)
@@ -766,29 +767,7 @@ class OntoEditor:
         :return: html file for the network's plot
         """
         net = Network(directed=True, height='100%', width='100%', bgcolor='#222222', font_color='white')
-        net.set_options("""
-            var options = {
-                "nodes": {
-                    "color": "rgba(153,153,153,1)",
-                    "font": {
-                    "color": "rgba(52,52,52,1)"
-                    }
-                },
-                "edges": {
-                    "color": {
-                    "inherit": true
-                    },
-                    "font": {
-                    "color": "rgba(158,158,158,1)",
-                    "strokeWidth": 0
-                    },
-                    "smooth": false
-                },
-                "physics": {
-                    "minVelocity": 0.75
-                }
-            }
-        """)
+        net.set_options(pkg_resources.read_text(config, 'network_visualization.config'))
         net.from_nx(nxgraph)
         if interactive:
             net.show_buttons()

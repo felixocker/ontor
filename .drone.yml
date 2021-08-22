@@ -1,0 +1,21 @@
+---
+kind: pipeline
+name: python-3-8
+type: docker
+
+steps:
+- name: test
+  image: carvk/java_python:openjdk15_python38
+  commands:
+  - pip install -r requirements.txt
+  - pip install .
+  - cd tests
+  - python -m unittest discover
+
+# To save energy and resources ci should only run for a few branches
+# Related section of the docs: https://docs.drone.io/pipeline/triggers/
+# Strategy: push regularly to branch `develop` and occasionally to `develop_ci` (only when ci should run)
+trigger:
+  branch:
+    - main
+    - develop_ci

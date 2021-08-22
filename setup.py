@@ -22,6 +22,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
 
+    include_package_data=True, # include non-code files during installation
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
     python_requires=">=3.8",

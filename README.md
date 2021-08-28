@@ -1,5 +1,5 @@
 <!--  TODO: change URL w.r.t. original repo, i.e. https://github.com/felixocker/ontor -->
-[![Build Status](https://cloud.drone.io/api/badges/cknoll/ontor/status.svg)](https://cloud.drone.io/cknoll/ontor)
+[![Build Status](https://cloud.drone.io/api/badges/felixocker/ontor/status.svg)](https://cloud.drone.io/felixocker/ontor)
 
 # ONTology editOR (ontor)
 ontology editor built on [Owlready2](https://pypi.org/project/Owlready2/)

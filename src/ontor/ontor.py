@@ -44,8 +44,8 @@ from owlready2 import destroy_entity, get_ontology, onto_path, types,\
                       Not, Inverse
 from pyvis.network import Network
 
-import config
-import queries
+from . import config
+from . import queries
 
 logger = logging.getLogger(__name__)
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

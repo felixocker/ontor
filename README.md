@@ -1,4 +1,3 @@
-<!--  TODO: change URL w.r.t. original repo, i.e. https://github.com/felixocker/ontor -->
 [![Build Status](https://cloud.drone.io/api/badges/felixocker/ontor/status.svg)](https://cloud.drone.io/felixocker/ontor)
 
 # ONTology editOR (ontor)
@@ -18,9 +17,11 @@ each instance of the ontor class represents an individual ontology and provides 
 ontor provides a tuple based syntax with JSON and CSV support for ontology editing to facilitate focusing on the ontology's content
 
 ## requirements and installation
-* Python 3.9.6+
-* install ontor to run the example, possibly in editable mode: ```pip install -e .```
-* generate documentation via sphinx using the makefile in docs/: ```make html```
+* Python 3.9.5+
+* install ontor using pip
+  * regular: ```pip install .```
+  * editable mode: ```pip install -e .```
+* generate documentation via sphinx using the makefile in *docs/*: ```make html```
 
 ## demo
 the directory *example/* includes a demo application inspired by [Protégé's pizza example](https://protegewiki.stanford.edu/wiki/Protege4Pizzas10Minutes)

@@ -48,33 +48,8 @@ from . import config
 from . import queries
 
 
-logger = logging.getLogger(__name__)
-timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-logging.basicConfig(filename=timestamp+"_om.log", level=logging.DEBUG)
-
-
-@contextmanager
-def _redirect_to_log():
-    with open(os.devnull, "w") as devnull:
-        old_stdout = sys.stdout
-        old_stderr = sys.stderr
-        result_out = StringIO()
-        result_err = StringIO()
-        sys.stdout = result_out
-        sys.stderr = result_err
-        try:
-            yield
-        finally:
-            sys.stdout = old_stdout
-            sys.stderr = old_stderr
-            if result_out.getvalue():
-                logger.info(f"reasoner output redirect: \n{_indent_log(result_out.getvalue())}")
-            if result_err.getvalue():
-                logger.info(f"reasoner errors redirect: \n{_indent_log(result_err.getvalue())}")
-
-
-def _indent_log(info: str) -> str:
-    return textwrap.indent(info, '>   ')
+LOGFILE = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")+"_ontor.log"
+logging.basicConfig(filename=LOGFILE, level=logging.DEBUG)
 
 
 def load_csv(csv_file: str, load_first_line: bool=False) -> list:
@@ -103,14 +78,17 @@ def load_json(json_file: str) -> dict:
     return data
 
 
-def cleanup(*extensions: str) -> None:
+def cleanup(all: bool, *extensions: str) -> None:
     """ delete all files in the current directory with the extensions specified
 
     :param extensions: extensions of files to be deleted
+    :param all: do not delete current log file if set to False
     """
     dir = "./"
     for e in extensions:
         files = [f for f in os.listdir(dir) if f.endswith("." + e)]
+        if not all and LOGFILE in files:
+            files.remove(LOGFILE)
         for f in files:
             os.remove(os.path.join(dir, f))
 
@@ -139,6 +117,7 @@ class OntoEditor:
         self.iri = iri
         self.path = path
         self.filename = path.split(sep="/")[-1]
+        self.logger = logging.getLogger(self.filename.split(".")[0])
         self.query_prefixes = pkg_resources.read_text(queries, 'prefixes.sparql')
         onto_path.extend(list(set(path.rsplit("/", 1)[0]) - set(onto_path)))
         if import_paths:
@@ -146,18 +125,41 @@ class OntoEditor:
         self.onto_world = World()
         try:
             self.onto = self.onto_world.get_ontology(self.path).load()
-            logger.info("successfully loaded ontology specified")
+            self.logger.info("successfully loaded ontology specified")
         except:
             self.onto = self.onto_world.get_ontology(self.iri)
             self.onto.save(file = self.filename)
-            logger.info("ontology file did not exist - created a new one")
+            self.logger.info("ontology file did not exist - created a new one")
+
+    @contextmanager
+    def _redirect_to_log(self):
+        with open(os.devnull, "w") as devnull:
+            old_stdout = sys.stdout
+            old_stderr = sys.stderr
+            result_out = StringIO()
+            result_err = StringIO()
+            sys.stdout = result_out
+            sys.stderr = result_err
+            try:
+                yield
+            finally:
+                sys.stdout = old_stdout
+                sys.stderr = old_stderr
+                if result_out.getvalue():
+                    self.logger.info(f"reasoner output redirect: \n{self._indent_log(result_out.getvalue())}")
+                if result_err.getvalue():
+                    self.logger.info(f"reasoner errors redirect: \n{self._indent_log(result_err.getvalue())}")
+
+    @staticmethod
+    def _indent_log(info: str) -> str:
+        return textwrap.indent(info, '>   ')
 
     def _reload_from_file(self) -> None:
         try:
             self.onto = get_ontology(self.path).load()
-            logger.info("successfully reloaded ontology from file")
+            self.logger.info("successfully reloaded ontology from file")
         except:
-            logger.info("ontology file did not exist")
+            self.logger.info("ontology file did not exist")
             sys.exit(1)
 
     def add_import(self, other_path: str) -> None:
@@ -255,7 +257,7 @@ class OntoEditor:
                 elif axiom[0] and not axiom[1]:
                     my_class = types.new_class(axiom[0], (Thing, ))
                 else:
-                    logger.warning(f"no class defined: {axiom}")
+                    self.logger.warning(f"no class defined: {axiom}")
                 if not axiom[2] and not axiom[4] and not axiom[5] and not axiom[6]:
                     continue
                 if all([axiom[i] for i in [2,4,6]]) or all([axiom[i] for i in [2,4,7]]):
@@ -267,7 +269,7 @@ class OntoEditor:
                                            axiom[3], axiom[4], axiom[5], axiom[13]],\
                                            [self.onto[axiom[6]]], axiom[7:13], axiom)
                 else:
-                    logger.warning(f"unexpected input: {axiom}")
+                    self.logger.warning(f"unexpected input: {axiom}")
         self.onto.save(file = self.filename)
 
     def _add_restr_to_def(self, current_axioms: list, resinfo: list, opinfo: list,
@@ -286,22 +288,22 @@ class OntoEditor:
         elif not any(opinfo) and any(dpinfo):
             obj = None
             if resinfo[1]:
-                logger.warning(f"invalid dp constraint - dp may not be inverted: {axiom}")
+                self.logger.warning(f"invalid dp constraint - dp may not be inverted: {axiom}")
                 return
             if resinfo[2] in ["some", "only"]:
                 obj = self._dp_constraint(dpinfo)
             elif resinfo[2] in ["value"] and dpinfo[3]:
                 obj = self._dp_range_types[dpinfo[0]](dpinfo[3])
             if obj is None:
-                logger.warning(f"invalid dp constraint: {axiom}")
+                self.logger.warning(f"invalid dp constraint: {axiom}")
                 return
             if resinfo[2] in ["exactly", "max", "min"]:
                 # NOTE: this may be resolved in future versions of Owlready2
-                logger.warning(f"qualified cardinality restrictions currently not "
+                self.logger.warning(f"qualified cardinality restrictions currently not "
                                 "supported for DPs: {axiom}")
                 return
         else:
-            logger.warning(f"restriction includes both op and dp: {axiom}")
+            self.logger.warning(f"restriction includes both op and dp: {axiom}")
             return
         if resinfo[1]:
             resinfo[0] = Inverse(resinfo[0])
@@ -310,7 +312,7 @@ class OntoEditor:
         elif resinfo[2] in ["exactly", "max", "min"] and resinfo[3]:
             res = getattr(resinfo[0], resinfo[2])(resinfo[3], obj)
         else:
-            logger.warning(f"unexpected cardinality definition: {axiom}")
+            self.logger.warning(f"unexpected cardinality definition: {axiom}")
             return
         if resinfo[4]:
             res = Not(res)
@@ -324,7 +326,7 @@ class OntoEditor:
         """
         dp_range = None
         if dpres[0] not in list(self._dp_range_types.keys()):
-            logger.warning(f"unexpected dp range: {dpres}")
+            self.logger.warning(f"unexpected dp range: {dpres}")
         if self._check_available_vals(dpres, [0]):
             dp_range = self._dp_range_types[dpres[0]]
         elif self._check_available_vals(dpres, [0,3]):
@@ -360,7 +362,7 @@ class OntoEditor:
             dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],\
                                            max_exclusive=dpres[5])
         else:
-            logger.warning(f"unexpected dp range restriction: {dpres}")
+            self.logger.warning(f"unexpected dp range restriction: {dpres}")
         return dp_range
 
     @staticmethod
@@ -391,7 +393,7 @@ class OntoEditor:
                 elif op[0] and op[1]:
                     my_op = types.new_class(op[0], (self.onto[op[1]], ))
                 else:
-                    logger.warning(f"unexpected op info: {op}")
+                    self.logger.warning(f"unexpected op info: {op}")
                 if op[2]:
                     my_op.domain.append(self.onto[op[2]])
                 if op[3]:
@@ -417,7 +419,7 @@ class OntoEditor:
                     elif dp[0] and dp[1]:
                         my_dp = types.new_class(dp[0], (self.onto[dp[1]], ))
                 except:
-                    logger.warning(f"unexpected dp info: {dp}")
+                    self.logger.warning(f"unexpected dp info: {dp}")
                     continue
                 if dp[2]:
                     my_dp.is_a.append(FunctionalProperty)
@@ -425,13 +427,13 @@ class OntoEditor:
                     try:
                         my_dp.domain.append(self.onto[dp[3]])
                     except:
-                        logger.warning(f"unexpected dp domain: {dp}")
+                        self.logger.warning(f"unexpected dp domain: {dp}")
                 if any(dp[4:]):
                     dprange = self._dp_constraint(dp[4:])
                     if dprange:
                         my_dp.range = dprange
                     else:
-                        logger.warning(f"unexpected dp range: {dp}")
+                        self.logger.warning(f"unexpected dp range: {dp}")
                         continue
         self.onto.save(file = self.filename)
 
@@ -446,24 +448,24 @@ class OntoEditor:
                 if inst[0] and inst[1]:
                     my_instance = self.onto[inst[1]](inst[0])
                 else:
-                    logger.warning(f"unexpected instance info: {inst}")
+                    self.logger.warning(f"unexpected instance info: {inst}")
                 if not any(inst[2:]):
                     continue
                 if inst[2] and inst[3]:
                     pred = self.onto[inst[2]]
                     if DataProperty in pred.is_a:
                         if inst[4] and not inst[4] in self._dp_range_types:
-                            logger.warning(f"unexpected DP range: {inst}")
+                            self.logger.warning(f"unexpected DP range: {inst}")
                         elif inst[4]:
                             val = self._dp_range_types[inst[4]](inst[3])
                         else:
-                            logger.warning(f"DP range undefined - defaulting to string: {inst}")
+                            self.logger.warning(f"DP range undefined - defaulting to string: {inst}")
                             val = inst[3]
                     elif ObjectProperty in pred.is_a and not inst[4]:
                         val = self.onto[inst[3]]
                     self._add_instance_relation(my_instance, pred, val)
                 else:
-                    logger.warning(f"unexpected triple: {inst}")
+                    self.logger.warning(f"unexpected triple: {inst}")
         self.onto.save(file = self.filename)
 
     @staticmethod
@@ -487,7 +489,7 @@ class OntoEditor:
                     func = funcs[ds[0]]
                     func([self.onto[elem] for elem in ds[1]])
                 except:
-                    logger.warning(f"unknown distinction type {ds[0]}")
+                    self.logger.warning(f"unknown distinction type {ds[0]}")
         self.onto.save(file = self.filename)
 
     def remove_elements(self, elem_list: list) -> None:
@@ -520,7 +522,7 @@ class OntoEditor:
                 parents = list(set(self.onto[elem].ancestors()).intersection(self.onto[elem].is_a))
                 parent = [p for p in parents if not p in self._prop_types]
                 if len(parent) > 1:
-                    logger.warning(f"unexpected parent classes: {parents}")
+                    self.logger.warning(f"unexpected parent classes: {parents}")
                 descendants = list(self.onto[elem].descendants())
                 descendants.remove(self.onto[elem])
                 if reassign:
@@ -548,7 +550,7 @@ class OntoEditor:
             elif res_type == "equivalent_to":
                 elems = self.onto[class_name].equivalent_to
             else:
-                logger.warning(f"unexpected res_type: {res_type}")
+                self.logger.warning(f"unexpected res_type: {res_type}")
                 sys.exit(1)
             if res_only:
                 elems = [x for x in elems if isinstance(x, Restriction)]
@@ -603,7 +605,7 @@ class OntoEditor:
         inf_onto = inferences.get_ontology(self.path).load()
         with inf_onto:
             try:
-                with _redirect_to_log():
+                with self._redirect_to_log():
                     if reasoner == "hermit":
                         sync_reasoner_hermit([inf_onto])
                     elif reasoner == "pellet":
@@ -617,7 +619,7 @@ class OntoEditor:
                 else:
                     inconsistent_classes = self.reasoning("pellet", False, True)
         if inconsistent_classes:
-            logger.warning(f"the ontology is inconsistent: {inconsistent_classes}")
+            self.logger.warning(f"the ontology is inconsistent: {inconsistent_classes}")
             if Nothing in inconsistent_classes:
                 inconsistent_classes.remove(Nothing)
         elif save and not inconsistent_classes:
@@ -625,11 +627,10 @@ class OntoEditor:
             self._reload_from_file()
         return inconsistent_classes
 
-    @staticmethod
-    def _check_reasoner(reasoner: str) -> None:
+    def _check_reasoner(self, reasoner: str) -> None:
         reasoners = ["hermit", "pellet"]
         if reasoner not in reasoners:
-            logger.warning(f"unexpected reasoner: {reasoner} - available reasoners: {reasoners}")
+            self.logger.warning(f"unexpected reasoner: {reasoner} - available reasoners: {reasoners}")
 
     def _analyze_pellet_results(self, exc: Exception) -> list:
         """ analyze the explanation returned by Pellet, print it and return
@@ -640,7 +641,7 @@ class OntoEditor:
         :return: list of classes identified as problematic
         """
         inconsistent_classes = []
-        logger.error(repr(exc))
+        self.logger.error(repr(exc))
         expl = self._extract_pellet_explanation(traceback.format_exc())
         if expl[0]:
             print("Pellet provides the following explanation(s):")
@@ -649,7 +650,7 @@ class OntoEditor:
                                     if self.onto[ax[0]] in self.onto.classes()]
         else:
             print("There was a more complex issue, check log for traceback")
-            logger.error(_indent_log(traceback.format_exc()))
+            self.logger.error(self._indent_log(traceback.format_exc()))
         return list(set(inconsistent_classes))
 
     @staticmethod
@@ -689,8 +690,8 @@ class OntoEditor:
                         sync_reasoner_pellet([debug_onto], infer_property_values=True,\
                                              infer_data_property_values=True, debug=2)
                     except base.OwlReadyInconsistentOntologyError as err:
-                        logger.error(repr(err))
-                        logger.error(_indent_log(traceback.format_exc()))
+                        self.logger.error(repr(err))
+                        self.logger.error(self._indent_log(traceback.format_exc()))
                         print("There was an issue with the input ontology; check the log for details.")
                         self._analyze_pellet_results(traceback.format_exc())
                     # IDEA: further analyze reasoner results to pin down cause of inconsistency
@@ -876,7 +877,7 @@ class OntoEditor:
             query_rel_lim = ":" + focusnode + " " + "?/".join(["(rdf:type|rdfs:subClassOf|:" +\
                                                                "|:".join(rels) + ")"]*radius) + "? ?o . "
         elif focusnode and not radius or not focusnode and radius:
-            logger.warning("focus: both a focusnode and a radius must be specified - ignoring the focus")
+            self.logger.warning("focus: both a focusnode and a radius must be specified - ignoring the focus")
         querypt_ignore = ""
         for node in ["s", "o"]:
             querypt_ignore += "\nMINUS {\n?s ?p ?o . \n" + _sparql_set_in(node, nodes_to_be_ignored) + "\n}"
@@ -893,7 +894,6 @@ class OntoEditor:
             one of the classes specified
         :return: None
         """
-
         # graph coloring settings; note that literals default to grey
         classcolor = "#0065bd"
         instancecolor = "#98c6ea"

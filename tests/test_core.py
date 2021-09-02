@@ -57,7 +57,7 @@ class TestCore(unittest.TestCase):
 
         # clean up
         ensure_file_absent(fname)
-        ontor.cleanup("log")
+        ontor.cleanup(True, "log")
 
 
 # auxiliary functions for unit tests

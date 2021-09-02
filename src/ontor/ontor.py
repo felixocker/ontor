@@ -41,7 +41,7 @@ from owlready2 import destroy_entity, get_ontology, onto_path, types,\
                       FunctionalProperty, InverseFunctionalProperty,\
                       TransitiveProperty, SymmetricProperty, AsymmetricProperty,\
                       ReflexiveProperty, IrreflexiveProperty, ThingClass,\
-                      Not, Inverse
+                      Not, Inverse, base
 from pyvis.network import Network
 
 from . import config
@@ -685,8 +685,14 @@ class OntoEditor:
                 debug = World()
                 debug_onto = debug.get_ontology(self.path).load()
                 with debug_onto:
-                    sync_reasoner_pellet([debug_onto], infer_property_values=True,\
-                                         infer_data_property_values=True, debug=2)
+                    try:
+                        sync_reasoner_pellet([debug_onto], infer_property_values=True,\
+                                             infer_data_property_values=True, debug=2)
+                    except base.OwlReadyInconsistentOntologyError as err:
+                        logger.error(repr(err))
+                        logger.error(_indent_log(traceback.format_exc()))
+                        print("There was an issue with the input ontology; check the log for details.")
+                        self._analyze_pellet_results(traceback.format_exc())
                     # IDEA: further analyze reasoner results to pin down cause of inconsistency
             if assume_correct_taxo:
                 pot_probl_ax = {"is_a": self._get_incon_class_res("is_a", inconsistent_classes),

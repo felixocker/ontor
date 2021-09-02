@@ -47,9 +47,11 @@ from pyvis.network import Network
 from . import config
 from . import queries
 
+
 logger = logging.getLogger(__name__)
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 logging.basicConfig(filename=timestamp+"_om.log", level=logging.DEBUG)
+
 
 @contextmanager
 def _redirect_to_log():
@@ -70,8 +72,10 @@ def _redirect_to_log():
             if result_err.getvalue():
                 logger.info(f"reasoner errors redirect: \n{_indent_log(result_err.getvalue())}")
 
-def _indent_log(info):
+
+def _indent_log(info: str) -> str:
     return textwrap.indent(info, '>   ')
+
 
 def load_csv(csv_file: str, load_first_line: bool=False) -> list:
     """ load data from CSV file
@@ -87,6 +91,7 @@ def load_csv(csv_file: str, load_first_line: bool=False) -> list:
             data = list(csv.reader(f))[1:]
     return data
 
+
 def load_json(json_file: str) -> dict:
     """ load data from JSON file
 
@@ -96,6 +101,19 @@ def load_json(json_file: str) -> dict:
     with open(json_file) as f:
         data = json.load(f)
     return data
+
+
+def cleanup(*extensions: str) -> None:
+    """ delete all files in the current directory with the extensions specified
+
+    :param extensions: extensions of files to be deleted
+    """
+    dir = "./"
+    for e in extensions:
+        files = [f for f in os.listdir(dir) if f.endswith("." + e)]
+        for f in files:
+            os.remove(os.path.join(dir, f))
+
 
 class OntoEditor:
     """create, load, and edit ontologies"""

@@ -134,6 +134,7 @@ def check_import():
     print(ontor4.onto.imported_ontologies)
 
 if __name__ == "__main__":
+    ontor.cleanup("log", "owl")
     create_first_onto()
     create_second_onto()
     modify_onto()

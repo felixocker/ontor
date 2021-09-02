@@ -57,7 +57,7 @@ class TestCore(unittest.TestCase):
 
         # clean up
         ensure_file_absent(fname)
-        cleanup_logs()
+        ontor.cleanup("log")
 
 
 # auxiliary functions for unit tests
@@ -67,12 +67,6 @@ def ensure_file_absent(path):
         os.unlink(path)
     except FileNotFoundError:
         pass
-
-def cleanup_logs():
-    dir = "./"
-    logfiles = [f for f in os.listdir(dir) if f.endswith(".log")]
-    for f in logfiles:
-        os.remove(os.path.join(dir, f))
 
 
 if __name__ == "__main__":

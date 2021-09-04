@@ -789,7 +789,7 @@ class OntoEditor:
         return df
 
     @staticmethod
-    def _query_results_to_df(query_results: list) -> nx.MultiDiGraph:
+    def _query_results_to_df(query_results: list) -> pd.DataFrame:
         clean_data = [[str(elem).split("#")[-1] for elem in row] for row in query_results]
         df = pd.DataFrame(clean_data, columns=['subject', 'predicate', 'object'])
         return df
@@ -885,13 +885,48 @@ class OntoEditor:
         query_body = "\n".join([querypt1, querypt_rels, querypt_nodes, query_rel_lim, querypt_ignore, querypt2])
         return query_body
 
-    def visualize(self, classes: list=None, properties: list=None, focusnode: str=None, radius: int=None) -> None:
+    def _render_by_label(self, graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
+        """ relabel the networkx graph's nodes and edges using the labels specified
+        in the ontology (if there are labels available); defaults to first label
+        """
+        mapping: dict = {}
+        for n in graph.nodes():
+            label = self._name_to_label(n)
+            if label != n:
+                mapping[n] = label
+        graph = nx.relabel_nodes(graph, mapping)
+        for e in graph.edges.items():
+            label = self._name_to_label(e[1]["label"])
+            if label != e[1]["label"]:
+                e[1]["label"] = label
+        return graph
+
+    def _name_to_label(self, name: str) -> str:
+        """ return (first) label for an entity
+
+        :param elem: name of the ontology's element
+        :return: elem's (first) label, defaults to name if there is no label available
+        """
+        try:
+            elem = self.onto[name]
+            if elem.label.first():
+                label = elem.label.first()
+            else:
+                label = name
+        # catch literals
+        except AttributeError:
+            label = name
+        return label
+
+    def visualize(self, classes: list=None, properties: list=None, focusnode: str=None,
+                  radius: int=None, bylabel: bool=False) -> None:
         """ visualize onto as a graph; generates html
 
         :param classes: list of classes to be included in plot
         :param properties: list of properties to be included in plot
         :param radius: maximum number of relations between a node and a node of
             one of the classes specified
+        :param bylabel: render visualization by labels (if available)
         :return: None
         """
         # graph coloring settings; note that literals default to grey
@@ -908,4 +943,6 @@ class OntoEditor:
             query_results = self.query_onto(self._build_query(query_body))
             graphdata = self._query_results_to_df(query_results)
         nxgraph = self._df_to_nx_incl_labels(graphdata, coloring)
+        if bylabel:
+            nxgraph = self._render_by_label(nxgraph)
         self._plot_nxgraph(nxgraph)

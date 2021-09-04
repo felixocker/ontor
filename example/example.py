@@ -113,8 +113,12 @@ def modify_onto():
              ["onto-ex.likes", "onto-ex.part", "onto-ex.has_base", "onto-ex.has_topping"],\
              "produces")
 
+    # labels for rendering by labels demo - set "bylabel" param to True in "visualize"
+    ontor3.onto["John"].label.append("John's label")
+    ontor3.onto["likes"].label.append("likes' label")
+
     ontor3.visualize(classes=["human", "pizza"], properties=["likes", "diameter_in_cm"],\
-                     focusnode="John", radius=2)
+                     focusnode="John", radius=2, bylabel=False)
 
 def _test_rm(as_is: list, as_expected: list, elem: str) -> None:
     """ check whether remove function worked as expected

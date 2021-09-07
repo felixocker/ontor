@@ -885,32 +885,41 @@ class OntoEditor:
         query_body = "\n".join([querypt1, querypt_rels, querypt_nodes, query_rel_lim, querypt_ignore, querypt2])
         return query_body
 
-    def _render_by_label(self, graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
+    def _render_by_label(self, graph: nx.MultiDiGraph, lang: str=None) -> nx.MultiDiGraph:
         """ relabel the networkx graph's nodes and edges using the labels specified
         in the ontology (if there are labels available); defaults to first label
+
+        :param graph: input graph w/ names
+        :param lang: desired label language
+        :return: graph w/ labels instead of names
         """
         mapping: dict = {}
         for n in graph.nodes():
-            label = self._name_to_label(n)
+            label = self._name_to_label(n, lang)
             if label != n:
                 mapping[n] = label
         graph = nx.relabel_nodes(graph, mapping)
         for e in graph.edges.items():
-            label = self._name_to_label(e[1]["label"])
+            label = self._name_to_label(e[1]["label"], lang)
             if label != e[1]["label"]:
                 e[1]["label"] = label
         return graph
 
-    def _name_to_label(self, name: str) -> str:
-        """ return (first) label for an entity
+    def _name_to_label(self, name: str, lang: str=None) -> str:
+        """ return (first) label for an entity in the language specified
 
         :param elem: name of the ontology's element
-        :return: elem's (first) label, defaults to name if there is no label available
+        :param lang: indicates desired label language, can be none to simply use
+            first label available
+        :return: elem's (first) label, defaults to name if there is no label
+            available in the language specified available
         """
         try:
             elem = self.onto[name]
-            if elem.label.first():
+            if not lang and elem.label.first():
                 label = elem.label.first()
+            elif [l for l in elem.label if l.lang == lang]:
+                label = [l for l in elem.label if l.lang == lang][0]
             else:
                 label = name
         # catch literals
@@ -919,7 +928,7 @@ class OntoEditor:
         return label
 
     def visualize(self, classes: list=None, properties: list=None, focusnode: str=None,
-                  radius: int=None, bylabel: bool=False) -> None:
+                  radius: int=None, bylabel: bool=False, lang: str=None) -> None:
         """ visualize onto as a graph; generates html
 
         :param classes: list of classes to be included in plot
@@ -927,6 +936,7 @@ class OntoEditor:
         :param radius: maximum number of relations between a node and a node of
             one of the classes specified
         :param bylabel: render visualization by labels (if available)
+        :param lang: language of the labels to be displayed
         :return: None
         """
         # graph coloring settings; note that literals default to grey
@@ -944,5 +954,5 @@ class OntoEditor:
             graphdata = self._query_results_to_df(query_results)
         nxgraph = self._df_to_nx_incl_labels(graphdata, coloring)
         if bylabel:
-            nxgraph = self._render_by_label(nxgraph)
+            nxgraph = self._render_by_label(nxgraph, lang)
         self._plot_nxgraph(nxgraph)

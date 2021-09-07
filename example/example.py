@@ -19,6 +19,7 @@
 # along with ontor.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+from owlready2 import locstr
 import ontor
 
 def create_first_onto():
@@ -98,27 +99,27 @@ def modify_onto():
     # removing restrictions by op - produces
     ontor3.remove_restrictions_including_prop("produces")
     _test_rm(ontor3.get_class_restrictions("pizza_company"),\
-            ["onto-ex.likes.some(onto-ex.food)"], "produces restrictions")
+             ["onto-ex.likes.some(onto-ex.food)"], "produces restrictions")
     # removing restrictions by class - pizza_company
     ontor3.remove_restrictions_on_class("pizza_company")
     _test_rm(ontor3.get_class_restrictions("pizza_company"),\
-            [], "restrictions on pizza_company")
+             [], "restrictions on pizza_company")
     # removing entities - pizza_company
     ontor3.remove_from_taxo(["pizza_company"])
     _test_rm(ontor3.get_class_restrictions("margherita_company", res_only= False),\
-            ["onto-ex.company"], "pizza_company")
+             ["onto-ex.company"], "pizza_company")
     # removing relations - produces
     ontor3.remove_elements(["produces"])
     _test_rm(ontor3.get_elems()[1],\
              ["onto-ex.likes", "onto-ex.part", "onto-ex.has_base", "onto-ex.has_topping"],\
              "produces")
 
-    # labels for rendering by labels demo - set "bylabel" param to True in "visualize"
-    ontor3.onto["John"].label.append("John's label")
+    # labels for rendering by labels demo - set "bylabel" to True and "lang" to "en" in "visualize"
+    ontor3.onto["John"].label.append(locstr("John's English label", lang = "en"))
     ontor3.onto["likes"].label.append("likes' label")
 
     ontor3.visualize(classes=["human", "pizza"], properties=["likes", "diameter_in_cm"],\
-                     focusnode="John", radius=2, bylabel=False)
+                     focusnode="John", radius=2, bylabel=False, lang=None)
 
 def _test_rm(as_is: list, as_expected: list, elem: str) -> None:
     """ check whether remove function worked as expected

@@ -115,8 +115,8 @@ def modify_onto():
              "produces")
 
     # labels for rendering by labels demo - set "bylabel" to True and "lang" to "en" in "visualize"
-    ontor3.onto["John"].label.append(locstr("John's English label", lang = "en"))
-    ontor3.onto["likes"].label.append("likes' label")
+    ontor3.add_label("John", "John's English label", "en")
+    ontor3.add_label("likes", "likes' label")
 
     ontor3.visualize(classes=["human", "pizza"], properties=["likes", "diameter_in_cm"],\
                      focusnode="John", radius=2, bylabel=False, lang=None)

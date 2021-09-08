@@ -59,6 +59,37 @@ class TestCore(unittest.TestCase):
         ensure_file_absent(fname)
         ontor.cleanup(True, "log")
 
+    def test_label_creation(self):
+        """ check label creation, also with localized strings
+        """
+
+        iri = "http://example.org/onto-ex.owl"
+        fname = "./onto-ex.owl"
+
+        ensure_file_absent(fname)
+
+        classes = [["ex-r-01", None, None, None, None, None, None],\
+                   ["ex-r-02", None, None, None, None, None, None]]
+        labels = [["ex-r-01", "human", "en"],
+                  ["ex-r-01", "homme", "fr"],
+                  ["ex-r-02", "food"]]
+
+        ontor1 = ontor.OntoEditor(iri, fname)
+        ontor1.add_axioms(classes)
+
+        self.assertEqual(ontor1.onto["ex-r-01"].label, [])
+        self.assertEqual(ontor1.onto["ex-r-02"].label, [])
+
+        for l in labels:
+            ontor1.add_label(*l)
+
+        self.assertEqual(len(ontor1.onto["ex-r-01"].label) + len(ontor1.onto["ex-r-02"].label), len(labels), "number of labels not as expected")
+        self.assertEqual(len([l for l in ontor1.onto["ex-r-01"].label if l.lang=="fr"]), 1, "number of French labels not as expected")
+        self.assertEqual(ontor1.onto["ex-r-02"].label.first(), "food", "label without language not as expected")
+
+        ensure_file_absent(fname)
+        ontor.cleanup(True, "log")
+
 
 # auxiliary functions for unit tests
 

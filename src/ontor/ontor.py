@@ -41,7 +41,7 @@ from owlready2 import destroy_entity, get_ontology, onto_path, types,\
                       FunctionalProperty, InverseFunctionalProperty,\
                       TransitiveProperty, SymmetricProperty, AsymmetricProperty,\
                       ReflexiveProperty, IrreflexiveProperty, ThingClass,\
-                      Not, Inverse, base
+                      Not, Inverse, base, locstr
 from pyvis.network import Network
 
 from . import config
@@ -507,6 +507,25 @@ class OntoEditor:
                     if desc != self.onto[elem]:
                         destroy_entity(desc)
                 destroy_entity(self.onto[elem])
+        self.onto.save(file = self.filename)
+
+    def add_label(self, name: str, label: str, lang: str=None) -> None:
+        """ add label in language specified as localized string, defaults to
+            regular string if no language is specified
+
+        :param name: entity name
+        :param label: label to be appended
+        :param lang: label's language (optional)
+        """
+        try:
+            entity = self.onto[name]
+        except AttributeError:
+            self.logger.info(f"unexpected entity: {name}, continuing anyways")
+            return
+        if lang:
+            entity.label.append(locstr(label, lang=lang))
+        else:
+            entity.label.append(label)
         self.onto.save(file = self.filename)
 
     def remove_from_taxo(self, elem_list: list, reassign: bool=True) -> None:

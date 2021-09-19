@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import unittest
+import unittest.mock
+from contextlib import contextmanager
 
 import ontor
 
@@ -59,6 +62,7 @@ class TestCore(unittest.TestCase):
         ensure_file_absent(fname)
         ontor.cleanup(True, "log")
 
+
     def test_label_creation(self):
         """ check label creation, also with localized strings
         """
@@ -91,13 +95,64 @@ class TestCore(unittest.TestCase):
         ontor.cleanup(True, "log")
 
 
+    def test_debugging(self):
+        """ check interactive debugging process; uses minimal example with two
+        contradicting axioms for a class and its parent class
+        """
+        iri = "http://example.org/onto-ex.owl"
+        fname = "./onto-ex.owl"
+
+        ensure_file_absent(fname)
+
+        classes = [["a", None, None, None, None, None, None],\
+                   ["b", "a", None, None, None, None, None],\
+                   ["c", None, None, None, None, None, None]]
+        ops = [["likes", None, None, None, False, False, False, False, False, False, False, None]]
+        axs = [["a", None, "likes", None, "min", 2, "c", None, None, None, None, None, None, None, False],
+               ["b", None, "likes", None, "max", 1, "c", None, None, None, None, None, None, None, False]]
+
+        ontor1 = ontor.OntoEditor(iri, fname)
+        ontor1.add_axioms(classes)
+        ontor1.add_ops(ops)
+        ontor1.add_axioms(axs)
+
+        debug_inputs = {
+            "Show further information? [y(es), n(o), q(uit)]": "n",
+            "Potentially inconsistent axiom: b is_a onto-ex.a\nDelete is_a axiom? [y(es), n(o), q(uit)]": "n",
+            "Potentially inconsistent axiom: b is_a onto-ex.likes.max(1, onto-ex.c)\nDelete is_a axiom? [y(es), n(o), q(uit)]": "y",
+        }
+
+        with suppress():
+            with unittest.mock.patch('builtins.input', side_effect=debug_inputs.values()):
+                ontor1.debug_onto(reasoner="hermit", assume_correct_taxo=False)
+
+        ensure_file_absent(fname)
+        ontor.cleanup(True, "log")
+
+
+
 # auxiliary functions for unit tests
+
+@contextmanager
+def suppress():
+    with open(os.devnull, "w") as devnull:
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        sys.stdout = devnull
+        sys.stderr = devnull
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+
 
 def ensure_file_absent(path):
     try:
         os.unlink(path)
     except FileNotFoundError:
         pass
+
 
 
 if __name__ == "__main__":

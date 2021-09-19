@@ -1,4 +1,5 @@
 [![Build Status](https://cloud.drone.io/api/badges/felixocker/ontor/status.svg)](https://cloud.drone.io/felixocker/ontor)
+[![License](https://img.shields.io/badge/license-GPLv3-blue)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 # ONTology editOR (ontor)
 ontology editor built on [Owlready2](https://pypi.org/project/Owlready2/)

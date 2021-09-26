@@ -119,7 +119,7 @@ class OntoEditor:
         self.filename = path.split(sep="/")[-1]
         self.logger = logging.getLogger(self.filename.split(".")[0])
         self.query_prefixes = pkg_resources.read_text(queries, 'prefixes.sparql')
-        onto_path.extend(list(set(path.rsplit("/", 1)[0]) - set(onto_path)))
+        onto_path.extend(list(set([path.rsplit("/", 1)[0]]) - set(onto_path)))
         if import_paths:
             onto_path.extend(list(set(import_paths) - set(onto_path)))
         self.onto_world = World()

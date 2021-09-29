@@ -128,7 +128,7 @@ class OntoEditor:
             self.logger.info("successfully loaded ontology specified")
         except:
             self.onto = self.onto_world.get_ontology(self.iri)
-            self.onto.save(file = self.filename)
+            self.onto.save(file = self.path)
             self.logger.info("ontology file did not exist - created a new one")
 
     @contextmanager
@@ -173,23 +173,23 @@ class OntoEditor:
         onto_import = get_ontology(other_path).load()
         with self.onto:
             self.onto.imported_ontologies.append(onto_import)
-        self.onto.save(file = self.filename)
+        self.onto.save(file = self.path)
 
-    def save_as(self, new_name: str) -> None:
+    def save_as(self, new_path: str) -> None:
         """ safe ontology as new file
         helpful, e.g., if multiple ontos were loaded
 
-        :param new_name: filename with which the onto shall be saved
+        :param new_path: path including filename for saving the onto
         """
-        self.onto.save(file = new_name)
-        self.filename = new_name
-        self.path = "file://./" + new_name
+        self.onto.save(file = new_path)
+        self.path = new_path
+        self.filename = new_path.rsplit("/", 1)[1]
 
     def export_ntriples(self) -> None:
         """ saves with same filename, but as ntriples
         """
-        ntfilename = self.filename.rsplit(".", 1)[0] + ".nt"
-        self.onto.save(file = ntfilename, format = "ntriples")
+        ntpath = self.path.rsplit(".", 1)[0] + ".nt"
+        self.onto.save(file = ntpath, format = "ntriples")
 
     def get_elems(self) -> list:
         """ get classes, object properties, datatype properties, and intances
@@ -270,7 +270,7 @@ class OntoEditor:
                                            [self.onto[axiom[6]]], axiom[7:13], axiom)
                 else:
                     self.logger.warning(f"unexpected input: {axiom}")
-        self.onto.save(file = self.filename)
+        self.onto.save(file = self.path)
 
     def _add_restr_to_def(self, current_axioms: list, resinfo: list, opinfo: list,
                           dpinfo: list, axiom: list) -> None:
@@ -403,7 +403,7 @@ class OntoEditor:
                         my_op.is_a.append(self._prop_types[count])
                 if op[-1]:
                     my_op.inverse_property = self.onto[op[11]]
-        self.onto.save(file = self.filename)
+        self.onto.save(file = self.path)
 
     def add_dps(self, dp_tuples: list) -> None:
         """ add datatype properties including their axioms to onto
@@ -435,7 +435,7 @@ class OntoEditor:
                     else:
                         self.logger.warning(f"unexpected dp range: {dp}")
                         continue
-        self.onto.save(file = self.filename)
+        self.onto.save(file = self.path)
 
     def add_instances(self, instance_tuples: list) -> None:
         """ add instances and their relations to onto
@@ -466,7 +466,7 @@ class OntoEditor:
                     self._add_instance_relation(my_instance, pred, val)
                 else:
                     self.logger.warning(f"unexpected triple: {inst}")
-        self.onto.save(file = self.filename)
+        self.onto.save(file = self.path)
 
     @staticmethod
     def _add_instance_relation(subj, pred, obj) -> None:
@@ -490,7 +490,7 @@ class OntoEditor:
                     func([self.onto[elem] for elem in ds[1]])
                 except:
                     self.logger.warning(f"unknown distinction type {ds[0]}")
-        self.onto.save(file = self.filename)
+        self.onto.save(file = self.path)
 
     def remove_elements(self, elem_list: list) -> None:
         """ remove elements, all their descendents and (in case of classes) instances,
@@ -507,7 +507,7 @@ class OntoEditor:
                     if desc != self.onto[elem]:
                         destroy_entity(desc)
                 destroy_entity(self.onto[elem])
-        self.onto.save(file = self.filename)
+        self.onto.save(file = self.path)
 
     def add_label(self, name: str, label: str, lang: str=None) -> None:
         """ add label in language specified as localized string, defaults to
@@ -526,7 +526,7 @@ class OntoEditor:
             entity.label.append(locstr(label, lang=lang))
         else:
             entity.label.append(label)
-        self.onto.save(file = self.filename)
+        self.onto.save(file = self.path)
 
     def remove_from_taxo(self, elem_list: list, reassign: bool=True) -> None:
         """ remove a class from the taxonomy, but keep all subclasses and instances
@@ -552,7 +552,7 @@ class OntoEditor:
                     if reassign:
                         desc.is_a = desc.is_a + sc_res + eq_res
                 destroy_entity(self.onto[elem])
-        self.onto.save(file = self.filename)
+        self.onto.save(file = self.path)
 
     def get_class_restrictions(self, class_name: str, res_only: bool=True, res_type: str="is_a") -> list:
         """ retrieve restrictions on specific class by restriction type
@@ -583,7 +583,7 @@ class OntoEditor:
         with self.onto:
             for lst in self.onto[class_name].is_a, self.onto[class_name].equivalent_to:
                 self._remove_restr_from_class_def(lst)
-        self.onto.save(file = self.filename)
+        self.onto.save(file = self.path)
 
     def remove_restrictions_including_prop(self, prop_name: str) -> None:
         """ remove class restrictions that include a certain property
@@ -595,7 +595,7 @@ class OntoEditor:
             for c in self.onto.classes():
                 for lst in c.is_a, c.equivalent_to:
                     self._remove_restr_from_class_def(lst, self.onto[prop_name])
-        self.onto.save(file = self.filename)
+        self.onto.save(file = self.path)
 
     @staticmethod
     def _remove_restr_from_class_def(cls_restrictions, prop=None) -> None:
@@ -642,7 +642,7 @@ class OntoEditor:
             if Nothing in inconsistent_classes:
                 inconsistent_classes.remove(Nothing)
         elif save and not inconsistent_classes:
-            inf_onto.save(file = self.filename)
+            inf_onto.save(file = self.path)
             self._reload_from_file()
         return inconsistent_classes
 
@@ -723,7 +723,7 @@ class OntoEditor:
             ax_msg = "Potentially inconsistent axiom: "
             for rel in "is_a", "equivalent_to":
                 self._interactively_delete_axs_by_rel(rel, inconsistent_classes, pot_probl_ax, ax_msg)
-            self.onto.save(file = self.filename)
+            self.onto.save(file = self.path)
             self.debug_onto(reasoner, assume_correct_taxo)
 
     def _get_incon_class_res(self, restype: str, inconsistent_classes: list) -> list:
@@ -800,7 +800,7 @@ class OntoEditor:
 
     def _ntriples_to_df(self) -> nx.MultiDiGraph:
         self.export_ntriples()
-        f = open(self.filename.rsplit(".", 1)[0] + ".nt", "r")
+        f = open(self.path.rsplit(".", 1)[0] + ".nt", "r")
         lines = f.readlines()
         df = pd.DataFrame(columns=["subject", "predicate", "object"])
         for rownum, row in enumerate(lines):
@@ -824,7 +824,7 @@ class OntoEditor:
         net.from_nx(nxgraph)
         if interactive:
             net.show_buttons()
-        net.show(self.filename.rsplit(".", 1)[0] + ".html")
+        net.show(self.path.rsplit(".", 1)[0] + ".html")
 
     def _config_plot_query_body(self, classes: list=None, properties: list=None,
                                 focusnode: str=None, radius: int=None, include_class_res: bool=True,

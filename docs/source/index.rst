@@ -14,7 +14,7 @@ debugging, and visualizing OWL2 ontologies
    :maxdepth: 2
    :caption: Contents:
 
-.. automodule:: ontor
+.. automodule:: ontor.ontor
    :members:
 
 

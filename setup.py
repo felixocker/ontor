@@ -26,5 +26,11 @@ setuptools.setup(
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
     python_requires=">=3.9.5",
+    install_requires=[
+        'networkx',
+        'owlready2',
+        'pandas',
+        'pyvis',
+    ],
 )
 

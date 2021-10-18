@@ -544,6 +544,7 @@ class OntoEditor:
                     self.logger.warning(f"unexpected parent classes: {parents}")
                 descendants = list(self.onto[elem].descendants())
                 descendants.remove(self.onto[elem])
+                individuals = list(self.onto[elem].instances())
                 if reassign:
                     sc_res = self.get_class_restrictions(self.onto[elem].name, "is_a")
                     eq_res = self.get_class_restrictions(self.onto[elem].name, "equivalent_to")
@@ -551,6 +552,8 @@ class OntoEditor:
                     desc.is_a.append(parent[0])
                     if reassign:
                         desc.is_a = desc.is_a + sc_res + eq_res
+                for ind in individuals:
+                    ind.is_a.append(parent[0])
                 destroy_entity(self.onto[elem])
         self.onto.save(file = self.path)
 

@@ -6,6 +6,8 @@ import unittest
 import unittest.mock
 from contextlib import contextmanager
 
+from owlready2.class_construct import Restriction
+
 import ontor
 
 
@@ -14,11 +16,9 @@ class TestCore(unittest.TestCase):
     def test_onto_creation(self):
         """ basic test for ontology creation functions
         """
-
         iri = "http://example.org/onto-ex.owl"
         fname = "./onto-ex.owl"
 
-        # clean up
         ensure_file_absent(fname)
 
         classes = [["human", None, None, None, None, None, None],\
@@ -54,11 +54,9 @@ class TestCore(unittest.TestCase):
         self.assertEqual(len(list(ontor1.onto.object_properties())), len(ops), "number of object properties not as expected")
         self.assertEqual(len(list(ontor1.onto.data_properties())), len(dps), "number of datatype properties not as expected")
         self.assertEqual(len(list(ontor1.onto.individuals())), len(set([i[0] for i in ins])), "number of instances not as expected")
-        self.assertTrue(ontor1.onto["likes"].some(ontor1.onto["food"]) in ontor1.onto["human"].is_a)
-
+        self.assertIn(ontor1.onto["likes"].some(ontor1.onto["food"]), ontor1.onto["human"].is_a, "axiom not created as expected")
         self.assertTrue(os.path.isfile(fname))
 
-        # clean up
         ensure_file_absent(fname)
         ontor.cleanup(True, "log")
 
@@ -66,7 +64,6 @@ class TestCore(unittest.TestCase):
     def test_label_creation(self):
         """ check label creation, also with localized strings
         """
-
         iri = "http://example.org/onto-ex.owl"
         fname = "./onto-ex.owl"
 
@@ -92,6 +89,76 @@ class TestCore(unittest.TestCase):
         self.assertEqual(ontor1.onto["ex-r-02"].label.first(), "food", "label without language not as expected")
 
         ensure_file_absent(fname)
+        ontor.cleanup(True, "log")
+
+
+    def test_removal(self):
+        """ check removal functions
+        """
+        iri = "http://example.org/onto-ex.owl"
+        fname = "./onto-ex.owl"
+
+        ensure_file_absent(fname)
+
+        classes = [["a", None, None, None, None, None, None],\
+                   ["b", "a", None, None, None, None, None],\
+                   ["c", "b", None, None, None, None, None],\
+                   ["d", None, None, None, None, None, None]]
+        ins = [["A", "a", None, None, None],
+               ["B", "b", None, None, None]]
+        ops = [["rel", None, None, None, False, False, False, False, False, False, False, None],
+               ["rel2", None, None, None, False, False, False, False, False, False, False, None]]
+        axs = [["d", None, "rel", None, "max", 1, "a", None, None, None, None, None, None, None, False],
+               ["d", None, "rel", None, "max", 1, "b", None, None, None, None, None, None, None, False],
+               ["b", None, "rel2", None, "some", None, "d", None, None, None, None, None, None, None, False]]
+
+        def _init_example() -> ontor.OntoEditor:
+            ontor1 = ontor.OntoEditor(iri, fname)
+            ontor1.add_axioms(classes)
+            ontor1.add_ops(ops)
+            ontor1.add_axioms(axs)
+            ontor1.add_instances(ins)
+            # check onto creation
+            self.assertTrue(all([ontor1.onto[i[0]] in ontor1.onto.classes() for i in classes]), "onto classes not created as expected")
+            self.assertTrue(all([ontor1.onto[i[0]] in ontor1.onto.individuals() for i in ins]), "onto individuals not created as expected")
+            self.assertIn(ontor1.onto["rel"].max(1, ontor1.onto["a"]), ontor1.onto["d"].is_a, "axiom not created as expected")
+            self.assertIn(ontor1.onto["rel"].max(1, ontor1.onto["b"]), ontor1.onto["d"].is_a, "axiom not created as expected")
+            self.assertIn(ontor1.onto["rel2"].some(ontor1.onto["d"]), ontor1.onto["b"].is_a, "axiom not created as expected")
+            return ontor1
+
+        # remove class, its subclasses, instancees, and appearances in axiom
+        ontor1 = _init_example()
+        ontor1.remove_elements(["a"])
+        self.assertNotIn("a", [c.name for c in ontor1.onto.classes()], "onto class not removed as expected")
+        self.assertNotIn("b", [c.name for c in ontor1.onto.classes()], "onto subclass not removed as expected")
+        self.assertNotIn("A", [c.name for c in ontor1.onto.individuals()], "onto individual not removed as expected")
+        self.assertNotIn("onto-ex.rel2.max(1, onto-ex.a)", [str(ax) for ax in ontor1.onto["d"].is_a], "onto axiom not removed as expected")
+        ensure_file_absent(fname)
+
+        # remove class only, reparent its subclasses, instances, and axioms
+        ontor1 = _init_example()
+        ontor1.remove_from_taxo(elem_list=["b"], reassign=True)
+        self.assertNotIn("b", [c.name for c in ontor1.onto.classes()], "onto class not removed as expected")
+        self.assertIn(ontor1.onto["a"], ontor1.onto["c"].is_a, "onto subclass not reparented as expected")
+        self.assertIn(ontor1.onto["a"], ontor1.onto["B"].is_a, "onto individual not reparented as expected")
+        self.assertNotIn("onto-ex.rel.max(1, onto-ex.b)", [str(ax) for ax in ontor1.onto["d"].is_a], "onto axiom not removed as expected")
+        self.assertNotIn("onto-ex.rel2.some(onto-ex.b)", [str(ax) for ax in ontor1.onto["c"].is_a], "onto axiom not propagated as expected")
+        ensure_file_absent(fname)
+
+        # remove restrictions on class
+        ontor1 = _init_example()
+        ontor1.remove_restrictions_on_class("b")
+        self.assertTrue(all([type(p) != Restriction for p in ontor1.onto["b"].is_a]), "class restrictions not removed as expected")
+        ensure_file_absent(fname)
+
+        # remove all class restrictions including a certain property
+        ontor1 = _init_example()
+        ontor1.remove_restrictions_including_prop("rel")
+        self.assertNotIn(ontor1.onto["rel"].max(1, ontor1.onto["a"]), ontor1.onto["d"].is_a, "axiom not removed as expected")
+        self.assertNotIn(ontor1.onto["rel"].max(1, ontor1.onto["b"]), ontor1.onto["d"].is_a, "axiom not removed as expected")
+        self.assertIn(ontor1.onto["rel2"].some(ontor1.onto["d"]), ontor1.onto["b"].is_a, "axiom not kept as expected")
+        ensure_file_absent(fname)
+
         ontor.cleanup(True, "log")
 
 

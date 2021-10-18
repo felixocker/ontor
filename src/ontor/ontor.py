@@ -94,7 +94,8 @@ def cleanup(all: bool, *extensions: str) -> None:
 
 
 class OntoEditor:
-    """create, load, and edit ontologies"""
+    """ create, load, and edit ontologies
+    """
 
     # NOTE: _prop_types corresponds to owlready2.prop._TYPE_PROPS; defined here to ensure order
     _prop_types = [FunctionalProperty, InverseFunctionalProperty, TransitiveProperty,\
@@ -511,7 +512,7 @@ class OntoEditor:
 
     def add_label(self, name: str, label: str, lang: str=None) -> None:
         """ add label in language specified as localized string, defaults to
-            regular string if no language is specified
+        regular string if no language is specified
 
         :param name: entity name
         :param label: label to be appended

@@ -6,6 +6,7 @@ import sys
 import unittest
 import unittest.mock
 from contextlib import contextmanager
+from pathlib import Path
 
 from owlready2.class_construct import Restriction
 
@@ -13,6 +14,8 @@ import ontor
 
 
 class TestCore(unittest.TestCase):
+
+    test_dir = Path(__file__).parent
 
     def test_onto_creation(self):
         """ basic test for ontology creation functions
@@ -220,7 +223,8 @@ class TestCore(unittest.TestCase):
 
         ontor1.visualize(classes=["a", "b"], properties=["rel"], focusnode="b", radius=1)
         html_file = ontor1.path.rsplit(".", 1)[0] + ".html"
-        self.assertTrue(filecmp.cmp(html_file, "data/gold_visu.html"), "generated html visu not as expected")
+        gold_visu = self.test_dir / "data/gold_visu.html"
+        self.assertTrue(filecmp.cmp(html_file, gold_visu), "html generated for ontology visu not as expected")
 
         ensure_file_absent(html_file)
         ensure_file_absent(fname)

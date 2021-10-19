@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import filecmp
 import os
 import sys
 import unittest
@@ -193,6 +194,35 @@ class TestCore(unittest.TestCase):
             with unittest.mock.patch('builtins.input', side_effect=debug_inputs.values()):
                 ontor1.debug_onto(reasoner="hermit", assume_correct_taxo=False)
 
+        ensure_file_absent(fname)
+        ontor.cleanup(True, "log")
+
+
+    def test_visu(self):
+        """ test html creation for visu using a minimal example
+        """
+        iri = "http://example.org/onto-ex.owl"
+        fname = "./onto-ex.owl"
+
+        ensure_file_absent(fname)
+
+        classes = [["a", None, None, None, None, None, None],\
+                   ["b", "a", None, None, None, None, None],\
+                   ["c", None, None, None, None, None, None]]
+        ops = [["rel", None, None, None, False, False, False, False, False, False, False, None]]
+        axs = [["a", None, "rel", None, "min", 2, "c", None, None, None, None, None, None, None, False],
+               ["b", None, "rel", None, "max", 1, "c", None, None, None, None, None, None, None, False]]
+
+        ontor1 = ontor.OntoEditor(iri, fname)
+        ontor1.add_axioms(classes)
+        ontor1.add_ops(ops)
+        ontor1.add_axioms(axs)
+
+        ontor1.visualize(classes=["a", "b"], properties=["rel"], focusnode="b", radius=1)
+        html_file = ontor1.path.rsplit(".", 1)[0] + ".html"
+        self.assertTrue(filecmp.cmp(html_file, "data/gold_visu.html"), "generated html visu not as expected")
+
+        ensure_file_absent(html_file)
         ensure_file_absent(fname)
         ontor.cleanup(True, "log")
 

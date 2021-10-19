@@ -119,7 +119,7 @@ def modify_onto():
     ontor3.add_label("likes", "likes' label")
 
     ontor3.visualize(classes=["human", "pizza"], properties=["likes", "diameter_in_cm"],\
-                     focusnode="John", radius=2, bylabel=False, lang=None)
+                     focusnode="John", radius=2, bylabel=False, lang=None, open_html=True)
 
 def _test_rm(as_is: list, as_expected: list, elem: str) -> None:
     """ check whether remove function worked as expected

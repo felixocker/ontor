@@ -817,18 +817,24 @@ class OntoEditor:
         df = pd.DataFrame(clean_data, columns=['subject', 'predicate', 'object'])
         return df
 
-    def _plot_nxgraph(self, nxgraph: nx.MultiDiGraph, interactive: bool=False) -> None:
-        """
+    def _plot_nxgraph(self, nxgraph: nx.MultiDiGraph, open_html: bool=False,
+                      interactive: bool=False) -> None:
+        """ create html file for the network's plot
+
         :param nxgraph: networkx graph including the ontology's triples
+        :param open_html: directly open the html file created using the default program
         :param interactive: activates mode for changing network appearance
-        :return: html file for the network's plot
         """
         net = Network(directed=True, height='100%', width='100%', bgcolor='#222222', font_color='white')
         net.set_options(pkg_resources.read_text(config, 'network_visualization.config'))
         net.from_nx(nxgraph)
         if interactive:
             net.show_buttons()
-        net.show(self.path.rsplit(".", 1)[0] + ".html")
+        html_name = self.path.rsplit(".", 1)[0] + ".html"
+        if open_html:
+            net.show(html_name)
+        else:
+            net.write_html(html_name)
 
     def _config_plot_query_body(self, classes: list=None, properties: list=None,
                                 focusnode: str=None, radius: int=None, include_class_res: bool=True,
@@ -951,7 +957,7 @@ class OntoEditor:
         return label
 
     def visualize(self, classes: list=None, properties: list=None, focusnode: str=None,
-                  radius: int=None, bylabel: bool=False, lang: str=None) -> None:
+                  radius: int=None, bylabel: bool=False, lang: str=None, open_html: bool=False) -> None:
         """ visualize onto as a graph; generates html
 
         :param classes: list of classes to be included in plot
@@ -978,4 +984,4 @@ class OntoEditor:
         nxgraph = self._df_to_nx_incl_labels(graphdata, coloring)
         if bylabel:
             nxgraph = self._render_by_label(nxgraph, lang)
-        self._plot_nxgraph(nxgraph)
+        self._plot_nxgraph(nxgraph, open_html)

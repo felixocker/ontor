@@ -16,6 +16,15 @@ import ontor
 class TestCore(unittest.TestCase):
 
     test_dir = Path(__file__).parent
+    fname = "./onto-ex.owl"
+
+
+    def tearDown(self):
+        """ remove temporary files: ontology and logs
+        """
+        ensure_file_absent(self.fname)
+        ontor.cleanup(True, "log")
+
 
     def test_onto_creation(self):
         """ basic test for ontology creation functions
@@ -61,9 +70,6 @@ class TestCore(unittest.TestCase):
         self.assertIn(ontor1.onto["likes"].some(ontor1.onto["food"]), ontor1.onto["human"].is_a, "axiom not created as expected")
         self.assertTrue(os.path.isfile(fname))
 
-        ensure_file_absent(fname)
-        ontor.cleanup(True, "log")
-
 
     def test_label_creation(self):
         """ check label creation, also with localized strings
@@ -91,9 +97,6 @@ class TestCore(unittest.TestCase):
         self.assertEqual(len(ontor1.onto["ex-r-01"].label) + len(ontor1.onto["ex-r-02"].label), len(labels), "number of labels not as expected")
         self.assertEqual(len([l for l in ontor1.onto["ex-r-01"].label if l.lang=="fr"]), 1, "number of French labels not as expected")
         self.assertEqual(ontor1.onto["ex-r-02"].label.first(), "food", "label without language not as expected")
-
-        ensure_file_absent(fname)
-        ontor.cleanup(True, "log")
 
 
     def test_removal(self):
@@ -161,9 +164,6 @@ class TestCore(unittest.TestCase):
         self.assertNotIn(ontor1.onto["rel"].max(1, ontor1.onto["a"]), ontor1.onto["d"].is_a, "axiom not removed as expected")
         self.assertNotIn(ontor1.onto["rel"].max(1, ontor1.onto["b"]), ontor1.onto["d"].is_a, "axiom not removed as expected")
         self.assertIn(ontor1.onto["rel2"].some(ontor1.onto["d"]), ontor1.onto["b"].is_a, "axiom not kept as expected")
-        ensure_file_absent(fname)
-
-        ontor.cleanup(True, "log")
 
 
     def test_debugging(self):
@@ -197,9 +197,6 @@ class TestCore(unittest.TestCase):
             with unittest.mock.patch('builtins.input', side_effect=debug_inputs.values()):
                 ontor1.debug_onto(reasoner="hermit", assume_correct_taxo=False)
 
-        ensure_file_absent(fname)
-        ontor.cleanup(True, "log")
-
 
     def test_visu(self):
         """ test html creation for visu using a minimal example
@@ -226,9 +223,8 @@ class TestCore(unittest.TestCase):
         gold_visu = self.test_dir / "data/gold_visu.html"
         self.assertTrue(filecmp.cmp(html_file, gold_visu), "html generated for ontology visu not as expected")
 
+        # bespoke teardown
         ensure_file_absent(html_file)
-        ensure_file_absent(fname)
-        ontor.cleanup(True, "log")
 
 
 

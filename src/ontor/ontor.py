@@ -259,7 +259,7 @@ class OntoEditor:
                     my_class = types.new_class(axiom[0], (Thing, ))
                 else:
                     self.logger.warning(f"no class defined: {axiom}")
-                if not axiom[2] and not axiom[4] and not axiom[5] and not axiom[6]:
+                if not axiom[2] and not axiom[4] and not axiom[5] and not axiom[5] == 0 and not axiom[6]:
                     continue
                 if all([axiom[i] for i in [2,4,6]]) or all([axiom[i] for i in [2,4,7]]):
                     if axiom[-1]:
@@ -308,9 +308,9 @@ class OntoEditor:
             return
         if resinfo[1]:
             resinfo[0] = Inverse(resinfo[0])
-        if resinfo[2] in ["some", "only", "value"] and not resinfo[3]:
+        if resinfo[2] in ["some", "only", "value"] and not resinfo[3] and not resinfo[3] == 0:
             res = getattr(resinfo[0], resinfo[2])(obj)
-        elif resinfo[2] in ["exactly", "max", "min"] and resinfo[3]:
+        elif resinfo[2] in ["exactly", "max", "min"] and (resinfo[3] or resinfo[3] == 0):
             res = getattr(resinfo[0], resinfo[2])(resinfo[3], obj)
         else:
             self.logger.warning(f"unexpected cardinality definition: {axiom}")

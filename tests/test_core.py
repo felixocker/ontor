@@ -17,6 +17,44 @@ class TestCore(unittest.TestCase):
 
     test_dir = Path(__file__).parent
     fname = "./onto-ex.owl"
+    iri = "http://example.org/onto-ex.owl"
+
+
+    def setUp(self):
+        """ set up standardized minimal onto for tests
+        """
+        ensure_file_absent(self.fname)
+
+        self.classes = [["human", None, None, None, None, None, None],
+                        ["vegetarian", "human", None, None, None, None, None],
+                        ["food", None, None, None, None, None, None],
+                        ["pizza", "food", None, None, None, None, None],
+                        ["pizza_base", "food", None, None, None, None, None],
+                        ["pizza_topping", "food", None, None, None, None, None],
+                        ["meat", "pizza_topping", None, None, None, None, None],
+                        ["vegetarian_pizza", "pizza", None, None, None, None, None],
+                        ["margherita", "vegetarian_pizza", None, None, None, None, None],
+                        ["mozzarella", "pizza_topping", None, None, None, None, None]]
+        self.ops = [["likes", None, "human", None, False, False, False, False, False, False, False, None],
+                    ["has_part", None, None, None, False, False, False, False, False, False, False, None],
+                    ["has_topping", "has_part", "pizza", "pizza_topping", False, False, False, False, False, False, False, None]]
+        self.dps = [["diameter_in_cm", None, True, "pizza", "integer", None, None, None, None, None],
+                    ["weight_in_grams", None, True, "pizza", "float", None, None, None, None, None],
+                    ["description", None, False, "food", "string", None, None, None, None, None]]
+        self.axs = [["human", None, "likes", None, "some", None, "food", None, None, None, None, None, None, None, False],
+                    ["vegetarian", None, "likes", None, "only", None, "vegetarian_pizza", None, None, None, None, None, None, None, False],
+                    ["vegetarian_pizza", None, "has_topping", None, "exactly", 0, "meat", None, None, None, None, None, None, None, False]]
+        self.ins = [["John", "vegetarian", None, None, None],
+                    ["His_pizza", "margherita", None, None, None],
+                    ["Veggie_individual", "vegetarian_pizza", None, None, None],
+                    ["John", "vegetarian", "likes", "His_pizza", None]]
+
+        self.ontor1 = ontor.OntoEditor(self.iri, self.fname)
+        self.ontor1.add_axioms(self.classes)
+        self.ontor1.add_ops(self.ops)
+        self.ontor1.add_dps(self.dps)
+        self.ontor1.add_instances(self.ins)
+        self.ontor1.add_axioms(self.axs)
 
 
     def tearDown(self):
@@ -27,199 +65,95 @@ class TestCore(unittest.TestCase):
 
 
     def test_onto_creation(self):
-        """ basic test for ontology creation functions
+        """ test ontology creation functions for adding classes, properties,
+        instances, and axioms
         """
-        iri = "http://example.org/onto-ex.owl"
-        fname = "./onto-ex.owl"
-
-        ensure_file_absent(fname)
-
-        classes = [["human", None, None, None, None, None, None],\
-                   ["vegetarian", "human", None, None, None, None, None],\
-                   ["food", None, None, None, None, None, None],\
-                   ["pizza", "food", None, None, None, None, None],\
-                   ["pizza_base", "food", None, None, None, None, None],\
-                   ["pizza_topping", "food", None, None, None, None, None],\
-                   ["vegetarian_pizza", "pizza", None, None, None, None, None],\
-                   ["margherita", "vegetarian_pizza", None, None, None, None, None]]
-        ops = [["likes", None, "human", None, False, False, False, False, False, False, False, None]]
-        dps = [["diameter_in_cm", None, True, "pizza", "integer", None, None, None, None, None],
-               ["weight_in_grams", None, True, "pizza", "float", None, None, None, None, None],
-               ["description", None, False, "food", "string", None, None, None, None, None]]
-        axs = [["human", None, "likes", None, "some", None, "food", None, None, None, None, None, None, None, False]]
-        ins = [["John", "vegetarian", None, None, None],\
-               ["His_pizza", "margherita", None, None, None],\
-               ["John", "vegetarian", "likes", "His_pizza", None]]
-        ontor1 = ontor.OntoEditor(iri, fname)
-
-        self.assertEqual(len(list(ontor1.onto.classes())), 0)
-        self.assertEqual(len(list(ontor1.onto.object_properties())), 0)
-        self.assertEqual(len(list(ontor1.onto.data_properties())), 0)
-        self.assertEqual(len(list(ontor1.onto.individuals())), 0)
-
-        ontor1.add_axioms(classes)
-        ontor1.add_ops(ops)
-        ontor1.add_dps(dps)
-        ontor1.add_instances(ins)
-        ontor1.add_axioms(axs)
-
-        self.assertEqual(len(list(ontor1.onto.classes())), len(classes), "number of classes not as expected")
-        self.assertEqual(len(list(ontor1.onto.object_properties())), len(ops), "number of object properties not as expected")
-        self.assertEqual(len(list(ontor1.onto.data_properties())), len(dps), "number of datatype properties not as expected")
-        self.assertEqual(len(list(ontor1.onto.individuals())), len(set([i[0] for i in ins])), "number of instances not as expected")
-        self.assertIn(ontor1.onto["likes"].some(ontor1.onto["food"]), ontor1.onto["human"].is_a, "axiom not created as expected")
-        self.assertTrue(os.path.isfile(fname))
+        self.assertEqual(len(list(self.ontor1.onto.classes())), len(self.classes), "number of classes not as expected")
+        self.assertEqual(len(list(self.ontor1.onto.object_properties())), len(self.ops), "number of object properties not as expected")
+        self.assertEqual(len(list(self.ontor1.onto.data_properties())), len(self.dps), "number of datatype properties not as expected")
+        self.assertEqual(len(list(self.ontor1.onto.individuals())), len(set([i[0] for i in self.ins])), "number of instances not as expected")
+        self.assertIn(self.ontor1.onto["likes"].some(self.ontor1.onto["food"]), self.ontor1.onto["human"].is_a, "axiom not created as expected")
+        self.assertIn(self.ontor1.onto["has_topping"].exactly(0, self.ontor1.onto["meat"]), self.ontor1.onto["vegetarian_pizza"].is_a, "axiom not created as expected")
+        self.assertTrue(os.path.isfile(self.fname))
 
 
     def test_label_creation(self):
         """ check label creation, also with localized strings
         """
-        iri = "http://example.org/onto-ex.owl"
-        fname = "./onto-ex.owl"
-
-        ensure_file_absent(fname)
-
-        classes = [["ex-r-01", None, None, None, None, None, None],\
-                   ["ex-r-02", None, None, None, None, None, None]]
-        labels = [["ex-r-01", "human", "en"],
-                  ["ex-r-01", "homme", "fr"],
-                  ["ex-r-02", "food"]]
-
-        ontor1 = ontor.OntoEditor(iri, fname)
-        ontor1.add_axioms(classes)
-
-        self.assertEqual(ontor1.onto["ex-r-01"].label, [])
-        self.assertEqual(ontor1.onto["ex-r-02"].label, [])
+        labels = [["human", "human", "en"],
+                  ["human", "homme", "fr"],
+                  ["food", "food"]]
+        self.assertEqual(self.ontor1.onto["human"].label, [])
+        self.assertEqual(self.ontor1.onto["food"].label, [])
 
         for l in labels:
-            ontor1.add_label(*l)
+            self.ontor1.add_label(*l)
 
-        self.assertEqual(len(ontor1.onto["ex-r-01"].label) + len(ontor1.onto["ex-r-02"].label), len(labels), "number of labels not as expected")
-        self.assertEqual(len([l for l in ontor1.onto["ex-r-01"].label if l.lang=="fr"]), 1, "number of French labels not as expected")
-        self.assertEqual(ontor1.onto["ex-r-02"].label.first(), "food", "label without language not as expected")
+        self.assertEqual(len(self.ontor1.onto["human"].label) + len(self.ontor1.onto["food"].label), len(labels), "number of labels not as expected")
+        self.assertEqual(len([l for l in self.ontor1.onto["human"].label if l.lang=="fr"]), 1, "number of French labels not as expected")
+        self.assertEqual(self.ontor1.onto["food"].label.first(), "food", "label without language not as expected")
 
 
-    def test_removal(self):
-        """ check removal functions
+    def test_element_removal_full(self):
+        """ test removal of a class, its subclasses, instancees, and appearances in axiom
         """
-        iri = "http://example.org/onto-ex.owl"
-        fname = "./onto-ex.owl"
+        self.ontor1.remove_elements(["vegetarian_pizza"])
+        self.assertNotIn("vegetarian_pizza", [c.name for c in self.ontor1.onto.classes()], "onto class not removed as expected")
+        self.assertNotIn("margherita", [c.name for c in self.ontor1.onto.classes()], "onto subclass not removed as expected")
+        self.assertNotIn("His_pizza", [c.name for c in self.ontor1.onto.individuals()], "onto individual not removed as expected")
+        self.assertNotIn("onto-ex.likes.only(onto-ex.vegetarian_pizza)", [str(ax) for ax in self.ontor1.onto["vegetarian"].is_a], "onto axiom not removed as expected")
 
-        ensure_file_absent(fname)
 
-        classes = [["a", None, None, None, None, None, None],\
-                   ["b", "a", None, None, None, None, None],\
-                   ["c", "b", None, None, None, None, None],\
-                   ["d", None, None, None, None, None, None]]
-        ins = [["A", "a", None, None, None],
-               ["B", "b", None, None, None]]
-        ops = [["rel", None, None, None, False, False, False, False, False, False, False, None],
-               ["rel2", None, None, None, False, False, False, False, False, False, False, None]]
-        axs = [["d", None, "rel", None, "max", 1, "a", None, None, None, None, None, None, None, False],
-               ["d", None, "rel", None, "max", 1, "b", None, None, None, None, None, None, None, False],
-               ["b", None, "rel2", None, "some", None, "d", None, None, None, None, None, None, None, False]]
+    def test_element_removal_selected(self):
+        """ test removal of a class only, but when its subclasses, instances,
+        and axioms are reparented
+        """
+        self.ontor1.remove_from_taxo(elem_list=["vegetarian_pizza"], reassign=True)
+        self.assertNotIn("vegetarian_pizza", [c.name for c in self.ontor1.onto.classes()], "onto class not removed as expected")
+        self.assertIn(self.ontor1.onto["pizza"], self.ontor1.onto["margherita"].is_a, "onto subclass not reparented as expected")
+        self.assertIn(self.ontor1.onto["pizza"], self.ontor1.onto["Veggie_individual"].is_a, "onto individual not reparented as expected")
+        self.assertNotIn("onto-ex.likes.only(onto-ex.vegetarian_pizza)", [str(ax) for ax in self.ontor1.onto["vegetarian"].is_a], "onto axiom not removed as expected")
+        self.assertIn("onto-ex.has_topping.exactly(0, onto-ex.meat)", [str(ax) for ax in self.ontor1.onto["margherita"].is_a], "onto axiom not propagated as expected")
 
-        def _init_example() -> ontor.OntoEditor:
-            ontor1 = ontor.OntoEditor(iri, fname)
-            ontor1.add_axioms(classes)
-            ontor1.add_ops(ops)
-            ontor1.add_axioms(axs)
-            ontor1.add_instances(ins)
-            # check onto creation
-            self.assertTrue(all([ontor1.onto[i[0]] in ontor1.onto.classes() for i in classes]), "onto classes not created as expected")
-            self.assertTrue(all([ontor1.onto[i[0]] in ontor1.onto.individuals() for i in ins]), "onto individuals not created as expected")
-            self.assertIn(ontor1.onto["rel"].max(1, ontor1.onto["a"]), ontor1.onto["d"].is_a, "axiom not created as expected")
-            self.assertIn(ontor1.onto["rel"].max(1, ontor1.onto["b"]), ontor1.onto["d"].is_a, "axiom not created as expected")
-            self.assertIn(ontor1.onto["rel2"].some(ontor1.onto["d"]), ontor1.onto["b"].is_a, "axiom not created as expected")
-            return ontor1
 
-        # remove class, its subclasses, instancees, and appearances in axiom
-        ontor1 = _init_example()
-        ontor1.remove_elements(["a"])
-        self.assertNotIn("a", [c.name for c in ontor1.onto.classes()], "onto class not removed as expected")
-        self.assertNotIn("b", [c.name for c in ontor1.onto.classes()], "onto subclass not removed as expected")
-        self.assertNotIn("A", [c.name for c in ontor1.onto.individuals()], "onto individual not removed as expected")
-        self.assertNotIn("onto-ex.rel2.max(1, onto-ex.a)", [str(ax) for ax in ontor1.onto["d"].is_a], "onto axiom not removed as expected")
-        ensure_file_absent(fname)
+    def test_restriction_removal(self):
+        """ test removal of class restrictions
+        """
+        self.ontor1.remove_restrictions_on_class("vegetarian_pizza")
+        self.assertTrue(all([type(p) != Restriction for p in self.ontor1.onto["vegetarian_pizza"].is_a]), "class restrictions not removed as expected")
 
-        # remove class only, reparent its subclasses, instances, and axioms
-        ontor1 = _init_example()
-        ontor1.remove_from_taxo(elem_list=["b"], reassign=True)
-        self.assertNotIn("b", [c.name for c in ontor1.onto.classes()], "onto class not removed as expected")
-        self.assertIn(ontor1.onto["a"], ontor1.onto["c"].is_a, "onto subclass not reparented as expected")
-        self.assertIn(ontor1.onto["a"], ontor1.onto["B"].is_a, "onto individual not reparented as expected")
-        self.assertNotIn("onto-ex.rel.max(1, onto-ex.b)", [str(ax) for ax in ontor1.onto["d"].is_a], "onto axiom not removed as expected")
-        self.assertNotIn("onto-ex.rel2.some(onto-ex.b)", [str(ax) for ax in ontor1.onto["c"].is_a], "onto axiom not propagated as expected")
-        ensure_file_absent(fname)
 
-        # remove restrictions on class
-        ontor1 = _init_example()
-        ontor1.remove_restrictions_on_class("b")
-        self.assertTrue(all([type(p) != Restriction for p in ontor1.onto["b"].is_a]), "class restrictions not removed as expected")
-        ensure_file_absent(fname)
-
-        # remove all class restrictions including a certain property
-        ontor1 = _init_example()
-        ontor1.remove_restrictions_including_prop("rel")
-        self.assertNotIn(ontor1.onto["rel"].max(1, ontor1.onto["a"]), ontor1.onto["d"].is_a, "axiom not removed as expected")
-        self.assertNotIn(ontor1.onto["rel"].max(1, ontor1.onto["b"]), ontor1.onto["d"].is_a, "axiom not removed as expected")
-        self.assertIn(ontor1.onto["rel2"].some(ontor1.onto["d"]), ontor1.onto["b"].is_a, "axiom not kept as expected")
+    def test_restriction_removal_by_prop(self):
+        """ test removal of all class restrictions including a certain property
+        """
+        self.ontor1.remove_restrictions_including_prop("likes")
+        self.assertNotIn(self.ontor1.onto["likes"].some(self.ontor1.onto["food"]), self.ontor1.onto["human"].is_a, "axiom not removed as expected")
+        self.assertNotIn(self.ontor1.onto["likes"].only(self.ontor1.onto["vegetarian_pizza"]), self.ontor1.onto["vegetarian"].is_a, "axiom not removed as expected")
+        self.assertIn(self.ontor1.onto["has_topping"].exactly(0, self.ontor1.onto["meat"]), self.ontor1.onto["vegetarian_pizza"].is_a, "axiom not kept as expected")
 
 
     def test_debugging(self):
-        """ check interactive debugging process; uses minimal example with two
-        contradicting axioms for a class and its parent class
+        """ check interactive debugging process; adds two contradicting axioms
         """
-        iri = "http://example.org/onto-ex.owl"
-        fname = "./onto-ex.owl"
-
-        ensure_file_absent(fname)
-
-        classes = [["a", None, None, None, None, None, None],\
-                   ["b", "a", None, None, None, None, None],\
-                   ["c", None, None, None, None, None, None]]
-        ops = [["likes", None, None, None, False, False, False, False, False, False, False, None]]
-        axs = [["a", None, "likes", None, "min", 2, "c", None, None, None, None, None, None, None, False],
-               ["b", None, "likes", None, "max", 1, "c", None, None, None, None, None, None, None, False]]
-
-        ontor1 = ontor.OntoEditor(iri, fname)
-        ontor1.add_axioms(classes)
-        ontor1.add_ops(ops)
-        ontor1.add_axioms(axs)
+        contr_axs = [["pizza_topping", None, "has_part", None, "min", 4, "pizza_topping", None, None, None, None, None, None, None, False],
+                     ["mozzarella", None, "has_part", None, "max", 2, "pizza_topping", None, None, None, None, None, None, None, False]]
+        self.ontor1.add_axioms(contr_axs)
 
         debug_inputs = {
             "Show further information? [y(es), n(o), q(uit)]": "n",
-            "Potentially inconsistent axiom: b is_a onto-ex.a\nDelete is_a axiom? [y(es), n(o), q(uit)]": "n",
-            "Potentially inconsistent axiom: b is_a onto-ex.likes.max(1, onto-ex.c)\nDelete is_a axiom? [y(es), n(o), q(uit)]": "y",
+            "Potentially inconsistent axiom: mozzarella is_a onto-ex.pizza_topping\nDelete is_a axiom? [y(es), n(o), q(uit)]": "n",
+            "Potentially inconsistent axiom: mozzarella is_a onto-ex.has_part.max(2, onto-ex.pizza_topping)\nDelete is_a axiom? [y(es), n(o), q(uit)]": "y",
         }
-
         with suppress():
             with unittest.mock.patch('builtins.input', side_effect=debug_inputs.values()):
-                ontor1.debug_onto(reasoner="hermit", assume_correct_taxo=False)
+                self.ontor1.debug_onto(reasoner="hermit", assume_correct_taxo=False)
 
 
     def test_visu(self):
         """ test html creation for visu using a minimal example
         """
-        iri = "http://example.org/onto-ex.owl"
-        fname = "./onto-ex.owl"
-
-        ensure_file_absent(fname)
-
-        classes = [["a", None, None, None, None, None, None],\
-                   ["b", "a", None, None, None, None, None],\
-                   ["c", None, None, None, None, None, None]]
-        ops = [["rel", None, None, None, False, False, False, False, False, False, False, None]]
-        axs = [["a", None, "rel", None, "min", 2, "c", None, None, None, None, None, None, None, False],
-               ["b", None, "rel", None, "max", 1, "c", None, None, None, None, None, None, None, False]]
-
-        ontor1 = ontor.OntoEditor(iri, fname)
-        ontor1.add_axioms(classes)
-        ontor1.add_ops(ops)
-        ontor1.add_axioms(axs)
-
-        ontor1.visualize(classes=["a", "b"], properties=["rel"], focusnode="b", radius=1)
-        html_file = ontor1.path.rsplit(".", 1)[0] + ".html"
+        self.ontor1.visualize(classes=["human", "pizza"], properties=["likes"], focusnode="John", radius=1)
+        html_file = self.ontor1.path.rsplit(".", 1)[0] + ".html"
         gold_visu = self.test_dir / "data/gold_visu.html"
         self.assertTrue(filecmp.cmp(html_file, gold_visu), "html generated for ontology visu not as expected")
 

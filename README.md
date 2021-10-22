@@ -31,12 +31,12 @@ the directory *example/* includes a demo application inspired by [Protégé's pi
 interactively debug an ontology\
 in the example: ```ontor3.debug_onto()```
 
-<img src="docs/debug.gif" width="500"/>
+<img src="https://github.com/felixocker/ontor/raw/main/docs/debug.gif" alt="interactive ontology debugging" width="500"/>
 
 visualize selected instances, classes, and properties in a given radius around a focus node; e.g., all nodes in a radius of two relations around the node "John"\
 in the example: ```ontor3.visualize(classes=["human", "pizza"], properties=["likes", "diameter_in_cm"], focusnode="John", radius=2)```
 
-<img src="docs/visualize.png" alt="visualize selected ontology parts" width="500"/>
+<img src="https://github.com/felixocker/ontor/raw/main/docs/visualize.png" alt="visualize selected ontology parts" width="500"/>
 
 ## license
 GPL v3.0

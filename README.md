@@ -1,4 +1,5 @@
 [![Build Status](https://cloud.drone.io/api/badges/felixocker/ontor/status.svg)](https://cloud.drone.io/felixocker/ontor)
+[![Documentation Status](https://readthedocs.org/projects/felixocker-ontor/badge/?version=latest)](https://felixocker-ontor.readthedocs.io/en/latest/?badge=latest)
 [![License](https://img.shields.io/badge/license-GPLv3-blue)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 # ONTology editOR (ontor)
@@ -18,7 +19,7 @@ each instance of the ontor class represents an individual ontology and provides 
 ontor provides a tuple based syntax with JSON and CSV support for ontology editing to facilitate focusing on the ontology's content
 
 ## requirements and installation
-* Python 3.9.5+
+* Python 3.9+
 * install ontor using pip
   * regular: ```pip install .```
   * editable mode: ```pip install -e .```

@@ -1,5 +1,6 @@
 [![Build Status](https://cloud.drone.io/api/badges/felixocker/ontor/status.svg)](https://cloud.drone.io/felixocker/ontor)
 [![Documentation Status](https://readthedocs.org/projects/felixocker-ontor/badge/?version=latest)](https://felixocker-ontor.readthedocs.io/en/latest/?badge=latest)
+[![PyPI](https://img.shields.io/pypi/v/ontor)](https://pypi.org/project/ontor/)
 [![License](https://img.shields.io/badge/license-GPLv3-blue)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 # ONTology editOR (ontor)
@@ -21,8 +22,8 @@ ontor provides a tuple based syntax with JSON and CSV support for ontology editi
 ## requirements and installation
 * Python 3.9+
 * install ontor using pip
-  * regular: ```pip install .```
-  * editable mode: ```pip install -e .```
+  * from PyPI: ```pip install ontor```
+  * from GitHub, in editable mode: ```pip install -e .```
 * generate documentation via sphinx using the makefile in *docs/*: ```make html```
 
 ## demo

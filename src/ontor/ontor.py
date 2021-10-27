@@ -24,16 +24,16 @@ import datetime
 import importlib.resources as pkg_resources
 import json
 import logging
-import networkx as nx
 import os
-import pandas as pd
 import re
 import sys
 import textwrap
 import traceback
-
 from contextlib import contextmanager
 from io import StringIO
+
+import networkx as nx
+import pandas as pd
 from owlready2 import destroy_entity, get_ontology, onto_path, types,\
                       sync_reasoner_hermit, sync_reasoner_pellet, Thing, Nothing,\
                       AllDisjoint, AllDifferent, DataProperty, ObjectProperty,\
@@ -78,19 +78,19 @@ def load_json(json_file: str) -> dict:
     return data
 
 
-def cleanup(all: bool, *extensions: str) -> None:
+def cleanup(complete: bool, *extensions: str) -> None:
     """ delete all files in the current directory with the extensions specified
 
     :param extensions: extensions of files to be deleted
-    :param all: do not delete current log file if set to False
+    :param complete: do not delete current log file if set to False
     """
-    dir = "./"
+    this_dir = "./"
     for e in extensions:
-        files = [f for f in os.listdir(dir) if f.endswith("." + e)]
-        if not all and LOGFILE in files:
+        files = [f for f in os.listdir(this_dir) if f.endswith("." + e)]
+        if not complete and LOGFILE in files:
             files.remove(LOGFILE)
         for f in files:
-            os.remove(os.path.join(dir, f))
+            os.remove(os.path.join(this_dir, f))
 
 
 class OntoEditor:
@@ -261,7 +261,7 @@ class OntoEditor:
                     self.logger.warning(f"no class defined: {axiom}")
                 if not axiom[2] and not axiom[4] and not axiom[5] and not axiom[5] == 0 and not axiom[6]:
                     continue
-                if all([axiom[i] for i in [2,4,6]]) or all([axiom[i] for i in [2,4,7]]):
+                if all(axiom[i] for i in [2,4,6]) or all(axiom[i] for i in [2,4,7]):
                     if axiom[-1]:
                         current_axioms = my_class.equivalent_to
                     else:
@@ -300,8 +300,8 @@ class OntoEditor:
                 return
             if resinfo[2] in ["exactly", "max", "min"]:
                 # NOTE: this may be resolved in future versions of Owlready2
-                self.logger.warning(f"qualified cardinality restrictions currently not "
-                                "supported for DPs: {axiom}")
+                self.logger.warning("qualified cardinality restrictions currently not "
+                                    f"supported for DPs: {axiom}")
                 return
         else:
             self.logger.warning(f"restriction includes both op and dp: {axiom}")
@@ -374,9 +374,9 @@ class OntoEditor:
         :return: True iff expected indices contain values
         """
         indices = [x for x, _ in enumerate(values)]
-        assert all([x in indices for x in expected_values]), "invalid expected_values"
-        test = all([values[i] for i in expected_values]) and\
-               not any([values[i] for i in [e for e in indices if not e in expected_values]])
+        assert all(x in indices for x in expected_values), "invalid expected_values"
+        test = all(values[i] for i in expected_values) and\
+               not any(values[i] for i in [e for e in indices if not e in expected_values])
         return bool(test)
 
     def add_ops(self, op_tuples: list) -> None:
@@ -683,7 +683,7 @@ class OntoEditor:
         :param pellet_traceback: traceback created when running reasoner
         :return: tuple of entire explanation and list of axioms included in explanation
         """
-        rex = re.compile("Explanation\(s\): \n(.*?)\n\n", re.DOTALL|re.MULTILINE)
+        rex = re.compile(r"Explanation\(s\): \n(.*?)\n\n", re.DOTALL|re.MULTILINE)
         res = set(re.findall(rex, pellet_traceback))
         axioms: list=[]
         if res:
@@ -804,8 +804,8 @@ class OntoEditor:
 
     def _ntriples_to_df(self) -> nx.MultiDiGraph:
         self.export_ntriples()
-        f = open(self.path.rsplit(".", 1)[0] + ".nt", "r")
-        lines = f.readlines()
+        with open(self.path.rsplit(".", 1)[0] + ".nt", "r") as f:
+            lines = f.readlines()
         df = pd.DataFrame(columns=["subject", "predicate", "object"])
         for rownum, row in enumerate(lines):
             df.loc[rownum] = self._remove_nt_brackets(row.rsplit(".", 1)[0].split(" ")[:3])
@@ -813,7 +813,7 @@ class OntoEditor:
 
     @staticmethod
     def _query_results_to_df(query_results: list) -> pd.DataFrame:
-        clean_data = [[str(elem).split("#")[-1] for elem in row] for row in query_results]
+        clean_data = [[str(elem).rsplit("#", maxsplit=1)[-1] for elem in row] for row in query_results]
         df = pd.DataFrame(clean_data, columns=['subject', 'predicate', 'object'])
         return df
 

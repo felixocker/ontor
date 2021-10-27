@@ -547,8 +547,8 @@ class OntoEditor:
                 descendants.remove(self.onto[elem])
                 individuals = list(self.onto[elem].instances())
                 if reassign:
-                    sc_res = self.get_class_restrictions(self.onto[elem].name, "is_a")
-                    eq_res = self.get_class_restrictions(self.onto[elem].name, "equivalent_to")
+                    sc_res = self.get_class_restrictions(self.onto[elem].name, res_type="is_a")
+                    eq_res = self.get_class_restrictions(self.onto[elem].name, res_type="equivalent_to")
                 for desc in descendants:
                     desc.is_a.append(parent[0])
                     if reassign:
@@ -558,7 +558,7 @@ class OntoEditor:
                 destroy_entity(self.onto[elem])
         self.onto.save(file = self.path)
 
-    def get_class_restrictions(self, class_name: str, res_only: bool=True, res_type: str="is_a") -> list:
+    def get_class_restrictions(self, class_name: str, res_type: str="is_a", res_only: bool=True) -> list:
         """ retrieve restrictions on specific class by restriction type
 
         :param class_name: name of the class for which restrictions shall be returned
@@ -638,7 +638,7 @@ class OntoEditor:
                 inconsistent_classes = list(inf_onto.inconsistent_classes())
             except Exception as exc:
                 if reasoner == "pellet" and debug:
-                    inconsistent_classes = self._analyze_pellet_results(exc)
+                    inconsistent_classes = self._analyze_pellet_results(str(exc))
                 else:
                     inconsistent_classes = self.reasoning("pellet", False, True)
         if inconsistent_classes:
@@ -655,12 +655,12 @@ class OntoEditor:
         if reasoner not in reasoners:
             self.logger.warning(f"unexpected reasoner: {reasoner} - available reasoners: {reasoners}")
 
-    def _analyze_pellet_results(self, exc: Exception) -> list:
+    def _analyze_pellet_results(self, exc: str) -> list:
         """ analyze the explanation returned by Pellet, print it and return
         inconsistent classes
         IDEA: also consider restrictions on properties and facts about instances
 
-        :param exc: exception thrown during reasoning process
+        :param exc: string of exception thrown during reasoning process
         :return: list of classes identified as problematic
         """
         inconsistent_classes = []
@@ -735,9 +735,9 @@ class OntoEditor:
         :param restype: type of class restriction, either is_a or equivalent_to
         :return: list of class restrictions for inconsistent_classes - does not return parent classes
         """
-        return [self.get_class_restrictions(ic.name, res_only=True, res_type=restype) for ic in inconsistent_classes]
+        return [self.get_class_restrictions(ic.name, res_type=restype, res_only=True) for ic in inconsistent_classes]
 
-    def _interactively_delete_axs_by_rel(self, rel: str, classes: list, axioms: list, msg: str) -> None:
+    def _interactively_delete_axs_by_rel(self, rel: str, classes: list, axioms: dict, msg: str) -> None:
         """
         :param rel: relation between class and axioms - is_a or equivalent_to
         :param classes: classes for which axioms are to be removed
@@ -755,7 +755,7 @@ class OntoEditor:
                     # IDEA: instead of simply deleting axioms, also allow user to edit them
 
     @staticmethod
-    def _bool_user_interaction(question: str, info: str=None) -> str:
+    def _bool_user_interaction(question: str, info: str=None) -> bool:
         """ simple CLI for yes/ no/ quit interaction
         """
         answer = {"y": True,
@@ -767,11 +767,11 @@ class OntoEditor:
         while user_input not in ["y", "n", "q"]:
             print("invalid choice, please try again")
             user_input = input()
-        if user_input in ["y", "n"]:
-            return answer[user_input]
         if user_input == "q":
             print("quitting - process needs to be restarted")
             sys.exit(0)
+        else:
+            return answer[user_input]
 
     @staticmethod
     def _remove_nt_brackets(triple: list) -> list:
@@ -853,10 +853,10 @@ class OntoEditor:
         max_radius = 5
         nodes_to_be_ignored = ["owl:Class", "owl:Thing", "owl:NamedIndividual", "owl:Restriction"]
 
-        if show_class_descendants:
+        if classes and show_class_descendants:
             descendent_lists = [[desc.name for desc in self.onto[c].descendants()] for c in classes]
             subclasses = list({c for sublist in descendent_lists for c in sublist})
-        else:
+        elif classes and not show_class_descendants:
             subclasses = classes
 
         def _sparql_set_values(node, values):

@@ -29,6 +29,7 @@ import re
 import sys
 import textwrap
 import traceback
+import typing
 from contextlib import contextmanager
 from io import StringIO
 
@@ -133,7 +134,7 @@ class OntoEditor:
             self.logger.info("ontology file did not exist - created a new one")
 
     @contextmanager
-    def _redirect_to_log(self):
+    def _redirect_to_log(self) -> typing.Iterator[None]:
         with open(os.devnull, "w") as devnull:
             old_stdout = sys.stdout
             old_stderr = sys.stderr
@@ -224,7 +225,7 @@ class OntoEditor:
         """
         with self.onto:
             graph = self.onto_world.as_rdflib_graph()
-            return list(graph.query(query))
+        return list(graph.query(query))
 
     def get_axioms(self) -> list:
         """ identify all axioms included in the onto
@@ -319,7 +320,7 @@ class OntoEditor:
             res = Not(res)
         current_axioms.append(res)
 
-    def _dp_constraint(self, dpres: list):
+    def _dp_constraint(self, dpres: list) -> typing.Optional[ConstrainedDatatype]:
         """
         :param dpres: DP restriction is list of the form [dprange, minex, minin,
             exact, maxin, maxex]
@@ -377,7 +378,7 @@ class OntoEditor:
         assert all(x in indices for x in expected_values), "invalid expected_values"
         test = all(values[i] for i in expected_values) and\
                not any(values[i] for i in [e for e in indices if not e in expected_values])
-        return bool(test)
+        return test
 
     def add_ops(self, op_tuples: list) -> None:
         """ add object properties including their axioms to onto
@@ -577,7 +578,7 @@ class OntoEditor:
                 sys.exit(1)
             if res_only:
                 elems = [x for x in elems if isinstance(x, Restriction)]
-            return elems
+        return elems
 
     def remove_restrictions_on_class(self, class_name: str) -> None:
         """ remove all restrictions on a given class
@@ -802,7 +803,7 @@ class OntoEditor:
                     n[1]["color"] = color
         return nxgraph
 
-    def _ntriples_to_df(self) -> nx.MultiDiGraph:
+    def _ntriples_to_df(self) -> pd.DataFrame:
         self.export_ntriples()
         with open(self.path.rsplit(".", 1)[0] + ".nt", "r") as f:
             lines = f.readlines()

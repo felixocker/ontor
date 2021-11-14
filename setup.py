@@ -16,7 +16,7 @@ setuptools.setup(
     project_urls={
         "Bug Tracker": "https://github.com/felixocker/ontor/issues",
     },
-    download_url = "https://github.com/felixocker/ontor/archive/refs/tags/v0.2.0.tar.gz",
+    download_url = "https://github.com/felixocker/ontor/archive/refs/tags/v0.3.0.tar.gz",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",

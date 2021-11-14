@@ -25,14 +25,14 @@ import ontor
 def create_first_onto():
     iri = "http://example.org/onto-ex.owl"
     fname = "./onto-ex.owl"
-    classes = [["human", None, None, None, None, None, None],\
-               ["vegetarian", "human", None, None, None, None, None],\
-               ["food", None, None, None, None, None, None],\
-               ["pizza", "food", None, None, None, None, None],\
-               ["pizza_base", "food", None, None, None, None, None],\
-               ["pizza_topping", "food", None, None, None, None, None],\
-               ["vegetarian_pizza", "pizza", None, None, None, None, None],\
-               ["margherita", "vegetarian_pizza", None, None, None, None, None]]
+    classes = [["human", None],\
+               ["vegetarian", "human"],\
+               ["food", None],\
+               ["pizza", "food"],\
+               ["pizza_base", "food"],\
+               ["pizza_topping", "food"],\
+               ["vegetarian_pizza", "pizza"],\
+               ["margherita", "vegetarian_pizza"]]
     ops = [["likes", None, "human", None, False, False, False, False, False, False, False, None]]
     dps = [["diameter_in_cm", None, True, "pizza", "integer", None, None, None, None, None],
            ["weight_in_grams", None, True, "pizza", "float", None, None, None, None, None],
@@ -42,7 +42,7 @@ def create_first_onto():
            ["His_pizza", "margherita", None, None, None],\
            ["John", "vegetarian", "likes", "His_pizza", None]]
     ontor1 = ontor.OntoEditor(iri, fname)
-    ontor1.add_axioms(classes)
+    ontor1.add_taxo(classes)
     ontor1.add_ops(ops)
     ontor1.add_dps(dps)
     ontor1.add_axioms(axs)
@@ -51,17 +51,17 @@ def create_first_onto():
 def create_second_onto():
     iri = "http://example.org/onto-ex-add.owl"
     fname = "./onto-ex-add.owl"
-    classes = [["beverage", None, None, None, None, None, None],
-               ["water", "beverage", None, None, None, None, None]]
+    classes = [["beverage", None],
+               ["water", "beverage"]]
     ontor2 = ontor.OntoEditor(iri, fname)
-    ontor2.add_axioms(classes)
+    ontor2.add_taxo(classes)
 
 def modify_onto():
-    classes = [["company", None, None, None, None, None, None],\
-               ["pizza_company", "company", None, None, None, None, False],\
-               ["margherita_company", "pizza_company", None, None, None, None, False],\
-               [None, None, None, None, None, None, None],\
-               ["quattro_stagioni", "pizza", None, None, None, None, False]]
+    classes = [["company", None],\
+               ["pizza_company", "company"],\
+               ["margherita_company", "pizza_company"],\
+               [None, None],\
+               ["quattro_stagioni", "pizza"]]
     ins = [["Her_pizza", "quattro_stagioni", None, None, None],\
            ["Jane", "human", "likes", "Her_pizza", None],\
            ["Faulty_pizza", None, None, None, None],\
@@ -71,7 +71,8 @@ def modify_onto():
     axs = [["pizza_company", "company", "produces", None, "some", None, "pizza", None, None, None, None, None, None, None, False],
            ["pizza_company", "company", "likes", None, "some", None, "food", None, None, None, None, None, None, None, False]]
     ontor3 = ontor.OntoEditor("http://example.org/onto-ex.owl", "./onto-ex.owl")
-    ontor3.add_axioms(classes)
+    ontor3.add_taxo(classes)
+    ontor3.add_taxo(ontor.load_csv("./data/taxo.csv"))
     # print(list(elem for elem in ontor3.get_elems()[0]))
     ontor3.add_ops(ontor.load_json("./data/props.json")["op"])
     # print(list(elem for elem in ontor3.get_elems()[0]))

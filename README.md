@@ -39,6 +39,11 @@ in the example: ```ontor3.visualize(classes=["human", "pizza"], properties=["lik
 
 <img src="https://github.com/felixocker/ontor/raw/main/docs/visualize.png" alt="visualize selected ontology parts" width="500"/>
 
+When creating ontologies from scratch, note that some functions have to be called in a specific order:
+1. *add_taxo* - the taxonomy has to be created first to ensure that all classes are defined, which are required by the properties, axioms, and individuals
+2. *add_ops*, *add_dps* - properties must be defined before axioms can be specified
+3. *add_axioms*, *add_instances* - axioms and instances can only be added when all the necessary classes and properties have been defined
+
 ## license
 GPL v3.0
 

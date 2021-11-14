@@ -25,16 +25,16 @@ class TestCore(unittest.TestCase):
         """
         ensure_file_absent(self.fname)
 
-        self.classes = [["human", None, None, None, None, None, None],
-                        ["vegetarian", "human", None, None, None, None, None],
-                        ["food", None, None, None, None, None, None],
-                        ["pizza", "food", None, None, None, None, None],
-                        ["pizza_base", "food", None, None, None, None, None],
-                        ["pizza_topping", "food", None, None, None, None, None],
-                        ["meat", "pizza_topping", None, None, None, None, None],
-                        ["vegetarian_pizza", "pizza", None, None, None, None, None],
-                        ["margherita", "vegetarian_pizza", None, None, None, None, None],
-                        ["mozzarella", "pizza_topping", None, None, None, None, None]]
+        self.classes = [["human", None],
+                        ["vegetarian", "human"],
+                        ["food", None],
+                        ["pizza", "food"],
+                        ["pizza_base", "food"],
+                        ["pizza_topping", "food"],
+                        ["meat", "pizza_topping"],
+                        ["vegetarian_pizza", "pizza"],
+                        ["margherita", "vegetarian_pizza"],
+                        ["mozzarella", "pizza_topping"]]
         self.ops = [["likes", None, "human", None, False, False, False, False, False, False, False, None],
                     ["has_part", None, None, None, False, False, False, False, False, False, False, None],
                     ["has_topping", "has_part", "pizza", "pizza_topping", False, False, False, False, False, False, False, None]]
@@ -50,7 +50,7 @@ class TestCore(unittest.TestCase):
                     ["John", "vegetarian", "likes", "His_pizza", None]]
 
         self.ontor1 = ontor.OntoEditor(self.iri, self.fname)
-        self.ontor1.add_axioms(self.classes)
+        self.ontor1.add_taxo(self.classes)
         self.ontor1.add_ops(self.ops)
         self.ontor1.add_dps(self.dps)
         self.ontor1.add_instances(self.ins)

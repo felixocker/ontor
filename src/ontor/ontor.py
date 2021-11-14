@@ -238,6 +238,32 @@ class OntoEditor:
             axioms.append(self.query_onto(self._build_query(query_ax)))
         return axioms
 
+    def add_taxo(self, class_tuples: list) -> None:
+        """ add taxonomy to onto
+
+        :param class_tuples: list of 2-tuples of the form [class, superclass]
+        """
+        with self.onto:
+            for clst in class_tuples:
+                if clst[0] and not clst[1]:
+                    my_class = types.new_class(clst[0], (Thing, ))
+                elif clst[0] and clst[1]:
+                    my_class = types.new_class(clst[0], (self.onto[clst[1]], ))
+                else:
+                    self.logger.warning(f"no class defined: {clst}")
+        self.onto.save(file = self.path)
+
+    @staticmethod
+    def class_dict_to_tuple_list(cls_dict: dict) -> list:
+        """ helper function to convert dict with class definitions to list of
+        tuples as required by add_taxo function
+
+        :param cls_dict: dictionary for taxonomy definition of the form
+            {superclass: [subclasses]}
+        :return: list of class definition 2-tuples of the form [[subclass, superclass], ...]
+        """
+        return [[subcls, supercls] for supercls in cls_dict.keys() for subcls in cls_dict[supercls]]
+
     def add_axioms(self, axiom_tuples: list) -> None:
         """ add entire axioms to onto
         NOTE: only one axiom may be specified at once
@@ -251,15 +277,9 @@ class OntoEditor:
         """
         with self.onto:
             for axiom in axiom_tuples:
-                if axiom[0] and axiom[1] and not axiom[-1]:
-                    my_class = types.new_class(axiom[0], (self.onto[axiom[1]], ))
-                elif axiom[0] and axiom[1] and axiom[-1]:
-                    my_class = types.new_class(axiom[0], (Thing, ))
+                my_class = self.onto[axiom[0]]
+                if axiom[0] and axiom[1] and axiom[-1]:
                     my_class.equivalent_to.append(self.onto[axiom[1]])
-                elif axiom[0] and not axiom[1]:
-                    my_class = types.new_class(axiom[0], (Thing, ))
-                else:
-                    self.logger.warning(f"no class defined: {axiom}")
                 if not axiom[2] and not axiom[4] and not axiom[5] and not axiom[5] == 0 and not axiom[6]:
                     continue
                 if all(axiom[i] for i in [2,4,6]) or all(axiom[i] for i in [2,4,7]):

@@ -539,15 +539,47 @@ class OntoEditor:
         :param label: label to be appended
         :param lang: label's language (optional)
         """
+        entity = self._get_entity_by_name(name)
+        if not entity:
+            return
+        desc = entity.label
+        self._add_description_generic(desc, label, lang)
+
+    def add_annotation(self, name: str, comment: str, lang: str=None) -> None:
+        """ add annotation in language specified as localized string, defaults to
+        regular string if no language is specified
+
+        :param name: entity name
+        :param comment: annotation to append
+        :param lang: annotation's language (optional)
+        """
+        entity = self._get_entity_by_name(name)
+        if not entity:
+            return
+        desc = entity.comment
+        self._add_description_generic(desc, comment, lang)
+
+    def _get_entity_by_name(self, name: str) -> typing.Optional[Thing]:
+        entity = None
         try:
             entity = self.onto[name]
         except AttributeError:
-            self.logger.info(f"unexpected entity: {name}, continuing anyways")
-            return
+            self.logger.info(f"unexpected entity: {name}, return None and continue anyways")
+        return entity
+
+    def _add_description_generic(self, desc_list: list, description: str,
+                                 lang: typing.Optional[str]) -> None:
+        """ add description in language specified as localized string, defaults to
+        regular string if no language is specified
+
+        :param desc_list: list to which to append the description
+        :param description: description to append
+        :param lang: description's language (optional)
+        """
         if lang:
-            entity.label.append(locstr(label, lang=lang))
+            desc_list.append(locstr(description, lang=lang))
         else:
-            entity.label.append(label)
+            desc_list.append(description)
         self.onto.save(file = self.path)
 
     def remove_from_taxo(self, elem_list: list, reassign: bool=True) -> None:

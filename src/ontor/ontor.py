@@ -128,7 +128,7 @@ class OntoEditor:
         try:
             self.onto = self.onto_world.get_ontology(self.path).load()
             self.logger.info("successfully loaded ontology specified")
-        except:
+        except FileNotFoundError:
             self.onto = self.onto_world.get_ontology(self.iri)
             self.onto.save(file = self.path)
             self.logger.info("ontology file did not exist - created a new one")
@@ -440,7 +440,10 @@ class OntoEditor:
                         my_dp = types.new_class(dp[0], (DataProperty, ))
                     elif dp[0] and dp[1]:
                         my_dp = types.new_class(dp[0], (self.onto[dp[1]], ))
-                except:
+                    elif not dp[0]:
+                        self.logger.warning(f"missing dp name: {dp}")
+                        continue
+                except Exception:
                     self.logger.warning(f"unexpected dp info: {dp}")
                     continue
                 if dp[2]:
@@ -448,7 +451,7 @@ class OntoEditor:
                 if dp[3]:
                     try:
                         my_dp.domain.append(self.onto[dp[3]])
-                    except:
+                    except Exception:
                         self.logger.warning(f"unexpected dp domain: {dp}")
                 if any(dp[4:]):
                     dprange = self._dp_constraint(dp[4:])
@@ -510,7 +513,7 @@ class OntoEditor:
                 try:
                     func = funcs[ds[0]]
                     func([self.onto[elem] for elem in ds[1]])
-                except:
+                except KeyError:
                     self.logger.warning(f"unknown distinction type {ds[0]}")
         self.onto.save(file = self.path)
 

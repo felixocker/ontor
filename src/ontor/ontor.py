@@ -158,10 +158,11 @@ class OntoEditor:
 
     def _reload_from_file(self) -> None:
         try:
-            self.onto = get_ontology(self.path).load()
+            self.onto_world = World()
+            self.onto = self.onto_world.get_ontology(self.path).load()
             self.logger.info("successfully reloaded ontology from file")
-        except:
-            self.logger.info("ontology file did not exist")
+        except FileNotFoundError:
+            self.logger.error("ontology file did not exist")
             sys.exit(1)
 
     def add_import(self, other_path: str) -> None:

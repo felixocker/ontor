@@ -33,6 +33,7 @@ setuptools.setup(
         'owlready2',
         'pandas',
         'pyvis',
+        'lark',
     ],
 )
 

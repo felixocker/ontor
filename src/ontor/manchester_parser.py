@@ -19,5 +19,8 @@ def parse(grammar_file: str, axiom: str):
 
 if __name__ == "__main__":
     lark_grammar_file = "./config/manchester_syntax.config"
-    example_axiom = "pizza EquivalentTo has min 1 topping and not has exactly 1 base"
-    print(parse(lark_grammar_file, example_axiom))
+    example_axiom_1 = "pizza EquivalentTo not ( has min 1 topping and not ( has exactly 1 base ) )"
+    example_axiom_2 = "pizza SubClassOf Inverse ( has min 1 topping and has only base )"
+    example_axiom_3 = "pizza SubClassOf diam only xsd:integer [ > 0 , < 5]"
+    for ax in example_axiom_1, example_axiom_2:
+        print(parse(lark_grammar_file, ax))

@@ -25,7 +25,9 @@ import importlib.resources as pkg_resources
 import json
 import logging
 import os
+import random
 import re
+import string
 import sys
 import textwrap
 import traceback
@@ -400,6 +402,29 @@ class OntoEditor:
         test = all(values[i] for i in expected_values) and\
                not any(values[i] for i in [e for e in indices if e not in expected_values])
         return test
+
+    def add_gcas(self, gcas: list) -> None:
+        """ workaround for representing General Class Axioms
+        adds two helper classes, each defined via an axiom, that are defined to be equivalent
+        helper classes are denoted with an underscore
+
+        :param gcas: list of two-tuples with axioms as defined by add_axioms()
+        """
+        with self.onto:
+            class GcaHelper(Thing):
+                comment = ["Helper class for workaround to represent General Class Axioms"]
+            for gca in gcas:
+                for a in gca:
+                    gh_name = "_" + ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+                    a.insert(0, gh_name)
+                    a.insert(1, "GcaHelper")
+                    assert a[-1] is True, "GCAs must be equivalented with auxiliary classes for inferences to work"
+                self.add_taxo([a[:2] for a in gca])
+                for a in gca:
+                    a[1] = None
+                gca.append([gca[0][0], gca[1][0]] + [None]*12 + [True])
+                self.add_axioms(gca)
+        self.onto.save(file=self.path)
 
     def add_ops(self, op_tuples: list) -> None:
         """ add object properties including their axioms to onto

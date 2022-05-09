@@ -22,6 +22,7 @@
 from owlready2 import locstr
 import ontor
 
+
 def create_first_onto():
     iri = "http://example.org/onto-ex.owl"
     fname = "./onto-ex.owl"
@@ -36,7 +37,8 @@ def create_first_onto():
     ops = [["likes", None, "human", None, False, False, False, False, False, False, False, None]]
     dps = [["diameter_in_cm", None, True, "pizza", "integer", None, None, None, None, None],
            ["weight_in_grams", None, True, "pizza", "float", None, None, None, None, None],
-           ["description", None, False, "food", "string", None, None, None, None, None]]
+           ["description", None, False, "food", "string", None, None, None, None, None],
+           ["has_price", None, True, None, "float", None, None, None, None, None]]
     axs = [["human", None, "likes", None, "some", None, "food", None, None, None, None, None, None, None, False]]
     ins = [["John", "vegetarian", None, None, None],\
            ["His_pizza", "margherita", None, None, None],\
@@ -48,6 +50,7 @@ def create_first_onto():
     ontor1.add_axioms(axs)
     ontor1.add_instances(ins)
 
+
 def create_second_onto():
     iri = "http://example.org/onto-ex-add.owl"
     fname = "./onto-ex-add.owl"
@@ -55,6 +58,7 @@ def create_second_onto():
                ["water", "beverage"]]
     ontor2 = ontor.OntoEditor(iri, fname)
     ontor2.add_taxo(classes)
+
 
 def modify_onto():
     classes = [["company", None],\
@@ -67,7 +71,8 @@ def modify_onto():
            ["Faulty_pizza", None, None, None, None],\
            ["Her_pizza", "quattro_stagioni", "weight_in_grams", "430.0", "float"],\
            ["Her_pizza", "quattro_stagioni", "diameter_in_cm", "32", "integer"],\
-           ["Her_pizza", "quattro_stagioni", "description", "jane's pizza", "string"]]
+           ["Her_pizza", "quattro_stagioni", "description", "jane's pizza", "string"],\
+           ["Another_pizza", "seafood_pizza", None, None, None]]
     axs = [["pizza_company", "company", "produces", None, "some", None, "pizza", None, None, None, None, None, None, None, False],
            ["pizza_company", "company", "likes", None, "some", None, "food", None, None, None, None, None, None, None, False]]
     ontor3 = ontor.OntoEditor("http://example.org/onto-ex.owl", "./onto-ex.owl")
@@ -122,6 +127,7 @@ def modify_onto():
     ontor3.visualize(classes=["human", "pizza"], properties=["likes", "diameter_in_cm"],\
                      focusnode="John", radius=2, bylabel=False, lang=None, open_html=True)
 
+
 def _test_rm(as_is: list, as_expected: list, elem: str) -> None:
     """ check whether remove function worked as expected
 
@@ -134,10 +140,18 @@ def _test_rm(as_is: list, as_expected: list, elem: str) -> None:
     else:
         print(f"removing {elem} failed")
 
+
+def add_gcas_to_onto():
+    gcas = ontor.load_json("./data/gcas.json")
+    ontor4 = ontor.OntoEditor("http://example.org/onto-ex.owl", "./onto-ex.owl")
+    ontor4.add_gcas(gcas)
+
+
 def check_import():
     ontor4 = ontor.OntoEditor("http://example.org/onto-ex.owl", "./onto-ex.owl", ["."])
     print("Imports are:")
     print(ontor4.onto.imported_ontologies)
+
 
 if __name__ == "__main__":
     ontor.cleanup(False, "log", "owl")
@@ -145,3 +159,4 @@ if __name__ == "__main__":
     create_second_onto()
     modify_onto()
     check_import()
+    add_gcas_to_onto()

@@ -68,7 +68,7 @@ def load_csv(csv_file: str, load_first_line: bool=False) -> list:
     return data
 
 
-def load_json(json_file: str) -> dict:
+def load_json(json_file: str) -> typing.Union[dict, list]:
     """ load data from JSON file
 
     :param json_file: input JSON file
@@ -283,7 +283,7 @@ class OntoEditor:
                     my_class.equivalent_to.append(self.onto[axiom[1]])
                 if not axiom[2] and not axiom[4] and not axiom[5] and not axiom[5] == 0 and not axiom[6]:
                     continue
-                if all(axiom[i] for i in [2,4,6]) or all(axiom[i] for i in [2,4,7]):
+                if all(axiom[i] for i in [2, 4, 6]) or all(axiom[i] for i in [2, 4, 7]):
                     if axiom[-1]:
                         current_axioms = my_class.equivalent_to
                     else:
@@ -293,7 +293,7 @@ class OntoEditor:
                                            [self.onto[axiom[6]]], axiom[7:13], axiom)
                 else:
                     self.logger.warning(f"unexpected input: {axiom}")
-        self.onto.save(file = self.path)
+        self.onto.save(file=self.path)
 
     def _add_restr_to_def(self, current_axioms: list, resinfo: list, opinfo: list,
                           dpinfo: list, axiom: list) -> None:
@@ -398,7 +398,7 @@ class OntoEditor:
         indices = [x for x, _ in enumerate(values)]
         assert all(x in indices for x in expected_values), "invalid expected_values"
         test = all(values[i] for i in expected_values) and\
-               not any(values[i] for i in [e for e in indices if not e in expected_values])
+               not any(values[i] for i in [e for e in indices if e not in expected_values])
         return test
 
     def add_ops(self, op_tuples: list) -> None:

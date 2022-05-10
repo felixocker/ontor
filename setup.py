@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="ontor",
-    version="0.3.2",
+    version="0.3.3",
     author="Felix Ocker",
     author_email="felix.ocker@googlemail.com",
     description="ontor - an ontology editor based on Owlready2",
@@ -16,13 +16,13 @@ setuptools.setup(
     project_urls={
         "Bug Tracker": "https://github.com/felixocker/ontor/issues",
     },
-    download_url = "https://github.com/felixocker/ontor/archive/refs/tags/v0.3.2.tar.gz",
+    download_url="https://github.com/felixocker/ontor/archive/refs/tags/v0.3.3.tar.gz",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Operating System :: OS Independent",
     ],
-    keywords = ["ontology", "owl"],
+    keywords=["ontology", "owl"],
 
     include_package_data=True, # include non-code files during installation
     package_dir={"": "src"},

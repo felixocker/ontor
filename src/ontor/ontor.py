@@ -44,7 +44,7 @@ from owlready2 import destroy_entity, get_ontology, onto_path, types,\
                       FunctionalProperty, InverseFunctionalProperty,\
                       TransitiveProperty, SymmetricProperty, AsymmetricProperty,\
                       ReflexiveProperty, IrreflexiveProperty, ThingClass,\
-                      Not, Inverse, base, locstr
+                      Not, Inverse, base, locstr, And, Or, class_construct
 from pyvis.network import Network
 
 from . import config
@@ -254,7 +254,7 @@ class OntoEditor:
                     my_class = types.new_class(clst[0], (self.onto[clst[1]], ))
                 else:
                     self.logger.warning(f"no class defined: {clst}")
-        self.onto.save(file = self.path)
+        self.onto.save(file=self.path)
 
     @staticmethod
     def class_dict_to_tuple_list(cls_dict: dict) -> list:
@@ -267,40 +267,88 @@ class OntoEditor:
         """
         return [[subcls, supercls] for supercls in cls_dict.keys() for subcls in cls_dict[supercls]]
 
-    def add_axioms(self, axiom_tuples: list) -> None:
+    def _combine_axioms(self, axs: dict) -> tuple:
+        """ define complex axioms, i.e., elementary axioms that are logically combined
+
+        :param axs: input for axioms, either simple list or of the form {"or": [ax1, "and": [ax2, ax3]]}
+        :return: combined restriction, restriction type (equivalence or subclass), and class
+        """
+        res, comb, cls = [], None, None
+        res_type_set, res_type = False, None
+        res_type_vals = {
+            None: False,
+            False: False,
+            True: True,
+        }
+        assert len(axs.keys()) == 1, f"more than one operator defined for axiom: {axs}"
+        operator = list(axs.keys())[0]
+        assert operator in ["and", "or"], f"invalid key for axiom combination: {operator}"
+        for axiom in axs[operator]:
+            if isinstance(axiom, list):
+                if not res_type_set:
+                    res_type_set, res_type = True, res_type_vals[axiom[-1]]
+                else:
+                    assert res_type_vals[axiom[-1]] == res_type, f"restriction types (subsumption vs equivalence) do not match: {axs}"
+                if not cls:
+                    cls = axiom[0]
+                else:
+                    assert axiom[0] == cls, f"aggregated restriction does not always refer to same class: {axs}"
+                # TODO: test the following
+                res.append(self._tuple_to_res(axiom[1], [self.onto[axiom[2]], axiom[3], axiom[4], axiom[5], axiom[13]],
+                                              [self.onto[axiom[6]]], axiom[7:13], axiom))
+            elif isinstance(axiom, dict):
+                res.append(self._combine_axioms(axiom)[0])
+        if operator == "and":
+            comb = And(res)
+        elif operator == "or":
+            comb = Or(res)
+        return comb, res_type, cls
+
+    def add_axioms(self, axioms: list) -> None:
         """ add entire axioms to onto
         NOTE: only one axiom may be specified at once
         NOTE: no error handling implemented for input tuples
-        NOTE: complex axioms, i.e., intersections and unions, are currently not supported
 
-        :param axiom_tuples: list of tuples of the form [class, superclass, property,
+        :param axioms: list of tuples of the form [class, superclass, property,
             inverted(bool), cardinality type, cardinality, op-object, dp-range,
             dp-min-ex, dp-min-in, dp-exact, dp-max-in, dp-max-ex, negated(bool),
             equivalence(bool)]
+            may also include dicts containing aggregate axioms of the form {"or": [ax1, "and": [ax2, ax3]]}
         """
         with self.onto:
-            for axiom in axiom_tuples:
-                my_class = self.onto[axiom[0]]
-                if axiom[0] and axiom[1] and axiom[-1]:
-                    my_class.equivalent_to.append(self.onto[axiom[1]])
-                if not axiom[2] and not axiom[4] and not axiom[5] and not axiom[5] == 0 and not axiom[6]:
-                    continue
-                if all(axiom[i] for i in [2, 4, 6]) or all(axiom[i] for i in [2, 4, 7]):
-                    if axiom[-1]:
+            for axiom in axioms:
+                if isinstance(axiom, list):
+                    my_class = self.onto[axiom[0]]
+                    if not any(axiom[i] for i in [1, 2, 4, 5, 6]) and not axiom[5] == 0:
+                        continue
+                    if all(axiom[i] for i in [0, 1, -1]) or all(axiom[i] for i in [2, 4, 6]) or all(axiom[i] for i in [2, 4, 7]):
+                        if axiom[-1]:
+                            current_axioms = my_class.equivalent_to
+                        else:
+                            current_axioms = my_class.is_a
+                        res = self._tuple_to_res(axiom[1], [self.onto[axiom[2]], axiom[3], axiom[4], axiom[5], axiom[13]],
+                                                 [self.onto[axiom[6]]], axiom[7:13], axiom)
+                        if res:
+                            current_axioms.append(res)
+                    else:
+                        self.logger.warning(f"unexpected input: {axiom}")
+                elif isinstance(axiom, dict):
+                    comb, res_type, cls = self._combine_axioms(axiom)
+                    my_class = self.onto[cls]
+                    if res_type:
                         current_axioms = my_class.equivalent_to
                     else:
                         current_axioms = my_class.is_a
-                    self._add_restr_to_def(current_axioms, [self.onto[axiom[2]],\
-                                           axiom[3], axiom[4], axiom[5], axiom[13]],\
-                                           [self.onto[axiom[6]]], axiom[7:13], axiom)
-                else:
-                    self.logger.warning(f"unexpected input: {axiom}")
+                    if comb:
+                        current_axioms.append(comb)
+                    else:
+                        self.logger.warning(f"unexpected input: {axiom}")
         self.onto.save(file=self.path)
 
-    def _add_restr_to_def(self, current_axioms: list, resinfo: list, opinfo: list,
-                          dpinfo: list, axiom: list) -> None:
+    def _tuple_to_res(self, supercls: str, resinfo: list, opinfo: list, dpinfo: list, axiom: list)\
+            -> typing.Union[type(class_construct), None]:
         """
-        :param current_axioms: list of an element's current axioms - equivalent_to or is_a
+        :param supercls: parent class or equivalent class, depending on equiv parameter
         :param resinfo: list with general restriction info [prop, inverted, p_type,
             cardin, negated]
         :param opinfo: list with op restriction info [op-object]
@@ -308,28 +356,30 @@ class OntoEditor:
             exact, maxin, maxex]
         :param axiom: list with complete axiom info
         """
-        if any(opinfo) and not any(dpinfo):
+        if supercls and not any(opinfo) and not any(dpinfo):
+            return self.onto[supercls]
+        elif any(opinfo) and not any(dpinfo):
             obj = opinfo[0]
         elif not any(opinfo) and any(dpinfo):
             obj = None
             if resinfo[1]:
                 self.logger.warning(f"invalid dp constraint - dp may not be inverted: {axiom}")
-                return
+                return None
             if resinfo[2] in ["some", "only"]:
                 obj = self._dp_constraint(dpinfo)
             elif resinfo[2] in ["value"] and dpinfo[3]:
                 obj = self._dp_range_types[dpinfo[0]](dpinfo[3])
             if obj is None:
                 self.logger.warning(f"invalid dp constraint: {axiom}")
-                return
+                return None
             if resinfo[2] in ["exactly", "max", "min"]:
                 # NOTE: this may be resolved in future versions of Owlready2
                 self.logger.warning("qualified cardinality restrictions currently not "
                                     f"supported for DPs: {axiom}")
-                return
+                return None
         else:
             self.logger.warning(f"restriction includes both op and dp: {axiom}")
-            return
+            return None
         if resinfo[1]:
             resinfo[0] = Inverse(resinfo[0])
         if resinfo[2] in ["some", "only", "value"] and not resinfo[3] and not resinfo[3] == 0:
@@ -338,10 +388,10 @@ class OntoEditor:
             res = getattr(resinfo[0], resinfo[2])(resinfo[3], obj)
         else:
             self.logger.warning(f"unexpected cardinality definition: {axiom}")
-            return
+            return None
         if resinfo[4]:
             res = Not(res)
-        current_axioms.append(res)
+        return res
 
     def _dp_constraint(self, dpres: list) -> typing.Optional[ConstrainedDatatype]:
         """

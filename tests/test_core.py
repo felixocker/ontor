@@ -164,6 +164,16 @@ class TestCore(unittest.TestCase):
             # TODO: resolve this workaround by setting up a docker image for CI containing Python 3.9 and Java
             print("test_gca: issue with reasoning - this may be due to a missing java install; skipping test for CI")
 
+    def test_nested_axiom(self):
+        """ test whether nested axioms that include logical operators are added correctly
+        """
+        compl_axs = [{"and": [["human", None, "likes", None, "some", None, "pizza", None, None, None, None, None, None, None, False],
+                              ["human", None, "likes", None, "some", None, "human", None, None, None, None, None, None, None, False]]}]
+        self.ontor1.add_axioms(compl_axs)
+        self.assertIn(self.ontor1.onto["likes"].some(self.ontor1.onto["pizza"]) &
+                      self.ontor1.onto["likes"].some(self.ontor1.onto["human"]), self.ontor1.onto["human"].is_a,
+                      "complex axiom not added as expected")
+
 
 # auxiliary functions for unit tests
 

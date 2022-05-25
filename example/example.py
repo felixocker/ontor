@@ -29,6 +29,7 @@ def create_first_onto():
     classes = [["human", None],\
                ["vegetarian", "human"],\
                ["food", None],\
+               ["drink", None],\
                ["pizza", "food"],\
                ["pizza_base", "food"],\
                ["pizza_topping", "food"],\
@@ -147,6 +148,12 @@ def add_gcas_to_onto():
     ontor4.add_gcas(gcas)
 
 
+def add_complex_axioms():
+    compl_axs = ontor.load_json("./data/complex_axioms.json")
+    ontor5 = ontor.OntoEditor("http://example.org/onto-ex.owl", "./onto-ex.owl")
+    ontor5.add_axioms(compl_axs)
+
+
 def check_import():
     ontor4 = ontor.OntoEditor("http://example.org/onto-ex.owl", "./onto-ex.owl", ["."])
     print("Imports are:")
@@ -160,3 +167,4 @@ if __name__ == "__main__":
     modify_onto()
     check_import()
     add_gcas_to_onto()
+    add_complex_axioms()

@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="ontor",
-    version="0.3.4",
+    version="0.3.5",
     author="Felix Ocker",
     author_email="felix.ocker@googlemail.com",
     description="ontor - an ontology editor based on Owlready2",

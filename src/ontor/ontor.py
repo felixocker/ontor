@@ -96,6 +96,15 @@ def cleanup(complete: bool, *extensions: str) -> None:
             os.remove(os.path.join(this_dir, f))
 
 
+class InfoException(Exception):
+    """ exception for invalid ontor inputs
+    """
+
+    def __init__(self, **kwargs: str):
+        Exception.__init__(self)
+        self.info = kwargs
+
+
 class OntoEditor:
     """ create, load, and edit ontologies
     """
@@ -262,6 +271,7 @@ class OntoEditor:
                 notion = types.new_class(name, (self.onto[parent], ))
             else:
                 self.logger.warning(f"unexpected info: {name, parent, elem_type}")
+                raise InfoException
         return notion
 
     def add_taxo(self, class_tuples: list) -> None:
@@ -273,7 +283,7 @@ class OntoEditor:
             for clst in class_tuples:
                 try:
                     my_class = self._create_notion(clst[0], clst[1], "c")
-                except TypeError:
+                except (TypeError, InfoException):
                     self.logger.warning(f"unexpected class info: {clst}")
                     continue
         self.onto.save(file=self.path)
@@ -511,7 +521,7 @@ class OntoEditor:
             for op in op_tuples:
                 try:
                     my_op = self._create_notion(op[0], op[1], "o")
-                except TypeError:
+                except (TypeError, InfoException):
                     self.logger.warning(f"unexpected op info: {op}")
                     continue
                 if op[2]:
@@ -535,7 +545,7 @@ class OntoEditor:
             for dp in dp_tuples:
                 try:
                     my_dp = self._create_notion(dp[0], dp[1], "d")
-                except TypeError:
+                except (TypeError, InfoException):
                     self.logger.warning(f"unexpected dp info: {dp}")
                     continue
                 if dp[2]:

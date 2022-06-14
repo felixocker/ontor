@@ -156,13 +156,9 @@ class TestCore(unittest.TestCase):
         gca_ex = [[["diameter_in_cm", None, "value", None, None, "integer", None, None, 32, None, None, None, True],
                    ["price", None, "value", None, None, "float", None, None, 5.0, None, None, None, True]]]
         self.ontor1.add_gcas(gca_ex)
-        try:
-            self.ontor1.reasoning(reasoner="pellet", save=True)
-            self.assertEqual(getattr(self.ontor1.onto["Veggie_individual"], "price"), 5,
-                             "GCA inference not as expected")
-        except AttributeError:
-            # TODO: resolve this workaround by setting up a docker image for CI containing Python 3.9 and Java
-            print("test_gca: issue with reasoning - this may be due to a missing java install; skipping test for CI")
+        self.ontor1.reasoning(reasoner="pellet", save=True)
+        self.assertEqual(getattr(self.ontor1.onto["Veggie_individual"], "price"), 5,
+                         "GCA inference not as expected")
 
     def test_nested_axiom(self):
         """ test whether nested axioms that include logical operators are added correctly

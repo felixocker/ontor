@@ -1,0 +1,6 @@
+[
+  [
+    ["has_topping",null,"min",1,"seafood_topping",null,null,null,null,null,null,null,true],
+    ["has_price",null,"value",null,null,"float",null,null,5,null,null,null,true]
+  ]
+]

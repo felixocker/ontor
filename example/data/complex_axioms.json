@@ -1,0 +1,13 @@
+[
+  {"or":
+    [
+      ["human", null, "likes", null, "some", null, "human", null, null, null, null, null, null, null, false],
+      {"and":
+        [
+          ["human", null, "likes", null, "some", null, "pizza", null, null, null, null, null, null, null, false],
+          ["human", null, "likes", null, "some", null, "drink", null, null, null, null, null, null, null, false]
+        ]
+      }
+    ]
+  }
+]

@@ -38,7 +38,7 @@ class TestCore(unittest.TestCase):
                     ["has_part", None, None, None, False, False, False, False, False, False, False, None],
                     ["has_topping", "has_part", "pizza", "pizza_topping", False, False, False, False, False, False, False, None]]
         self.dps = [["diameter_in_cm", None, True, "pizza", "integer", None, None, None, None, None],
-                    ["weight_in_grams", None, True, "pizza", "float", None, None, None, None, None],
+                    ["weight_in_grams", None, True, "pizza", "float", 0, None, None, None, None],
                     ["description", None, False, "food", "string", None, None, None, None, None],
                     ["price", None, True, "food", "float", None, None, None, None, None]]
         self.axs = [["human", None, "likes", None, "some", None, "food", None, None, None, None, None, None, None, False],
@@ -72,6 +72,8 @@ class TestCore(unittest.TestCase):
         self.assertEqual(len(list(self.ontor1.onto.individuals())), len(set([i[0] for i in self.ins])), "number of instances not as expected")
         self.assertIn(self.ontor1.onto["likes"].some(self.ontor1.onto["food"]), self.ontor1.onto["human"].is_a, "axiom not created as expected")
         self.assertIn(self.ontor1.onto["has_topping"].exactly(0, self.ontor1.onto["meat"]), self.ontor1.onto["vegetarian_pizza"].is_a, "axiom not created as expected")
+        self.assertEqual(len(self.ontor1.onto["weight_in_grams"].range), 1, "number of dp range elements not as expected")
+        self.assertEqual(self.ontor1.onto["weight_in_grams"].range[0].min_exclusive, 0, "limit of dp range not as expected")
         self.assertTrue(os.path.isfile(self.fname))
 
     def test_label_creation(self):

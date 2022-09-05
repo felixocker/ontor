@@ -473,8 +473,7 @@ class OntoEditor:
             self.logger.warning(f"unexpected dp range restriction: {dpres}")
         return dp_range
 
-    @staticmethod
-    def _check_available_vals(values: list, expected_values: list) -> bool:
+    def _check_available_vals(self, values: list, expected_values: list) -> bool:
         """
         :param values: list with values
         :param expected_values: list with indices of expected values
@@ -482,9 +481,13 @@ class OntoEditor:
         """
         indices = [x for x, _ in enumerate(values)]
         assert all(x in indices for x in expected_values), "invalid expected_values"
-        test = all(values[i] for i in expected_values) and\
-               not any(values[i] for i in [e for e in indices if e not in expected_values])
+        test = all(self._check_value_validity(values[i]) for i in expected_values) and\
+               not any(self._check_value_validity(values[i]) for i in [e for e in indices if e not in expected_values])
         return test
+
+    @staticmethod
+    def _check_value_validity(value) -> bool:
+        return value is not None and value is not False and value != ""
 
     def add_gcas(self, gcas: list) -> None:
         """ workaround for representing General Class Axioms
@@ -555,7 +558,7 @@ class OntoEditor:
                         my_dp.domain.append(self.onto[dp[3]])
                     except Exception:
                         self.logger.warning(f"unexpected dp domain: {dp}")
-                if any(dp[4:]):
+                if any(self._check_value_validity(d) for d in dp[4:]):
                     dprange = self._dp_constraint(dp[4:])
                     if dprange:
                         my_dp.range = dprange

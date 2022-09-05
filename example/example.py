@@ -37,10 +37,11 @@ def create_first_onto():
                ["margherita", "vegetarian_pizza"]]
     ops = [["likes", None, "human", None, False, False, False, False, False, False, False, None]]
     dps = [["diameter_in_cm", None, True, "pizza", "integer", None, None, None, None, None],
-           ["weight_in_grams", None, True, "pizza", "float", None, None, None, None, None],
+           ["weight_in_grams", None, True, "pizza", "float", 0, None, None, None, None],
            ["description", None, False, "food", "string", None, None, None, None, None],
            ["has_price", None, True, None, "float", None, None, None, None, None]]
-    axs = [["human", None, "likes", None, "some", None, "food", None, None, None, None, None, None, None, False]]
+    axs = [["human", None, "likes", None, "some", None, "food", None, None, None, None, None, None, None, False],
+           ["food", None, "weight_in_grams", None, "only", None, None, "float", 0, None, None, None, None, None, False]]
     ins = [["John", "vegetarian", None, None, None],
            ["His_pizza", "margherita", None, None, None],
            ["John", "vegetarian", "likes", "His_pizza", None]]

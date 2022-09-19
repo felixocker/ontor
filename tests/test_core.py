@@ -76,6 +76,15 @@ class TestCore(unittest.TestCase):
         self.assertEqual(self.ontor1.onto["weight_in_grams"].range[0].min_exclusive, 0, "limit of dp range not as expected")
         self.assertTrue(os.path.isfile(self.fname))
 
+    def test_dp(self):
+        """ test if dp was created correctly with False as value
+        """
+        dps = [["picked_up", None, True, "food", "boolean", None, None, None, None, None]]
+        ins = [["His_pizza", "margherita", "picked_up", False, "boolean"]]
+        self.ontor1.add_dps(dps)
+        self.ontor1.add_instances(ins)
+        self.assertEqual(getattr(self.ontor1.onto["His_pizza"], "picked_up"), False, "bool value False not set correctly for dp")
+
     def test_label_creation(self):
         """ check label creation, also with localized strings
         """

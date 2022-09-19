@@ -487,7 +487,7 @@ class OntoEditor:
 
     @staticmethod
     def _check_value_validity(value) -> bool:
-        return value is not None and value is not False and value != ""
+        return value is not None and value != ""
 
     def add_gcas(self, gcas: list) -> None:
         """ workaround for representing General Class Axioms
@@ -581,7 +581,7 @@ class OntoEditor:
                     self.logger.warning(f"unexpected instance info: {inst}")
                 if not any(inst[2:]):
                     continue
-                if inst[2] and inst[3]:
+                if inst[2] and self._check_value_validity(inst[3]):
                     pred = self.onto[inst[2]]
                     if DataProperty in pred.is_a:
                         if inst[4] and not inst[4] in self._dp_range_types:

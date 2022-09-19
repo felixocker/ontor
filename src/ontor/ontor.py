@@ -176,6 +176,14 @@ class OntoEditor:
             self.logger.error("ontology file did not exist")
             sys.exit(1)
 
+    def _transform_to_dp_type(self, data_type: str, val):
+        if data_type != "boolean":
+            return self._dp_range_types[data_type](val)
+        elif str(val).lower() == "false":
+            return False
+        elif str(val).lower() == "true":
+            return True
+
     def add_import(self, other_path: str) -> None:
         """ load an additional onto
 
@@ -401,7 +409,7 @@ class OntoEditor:
             if resinfo[2] in ["some", "only"]:
                 obj = self._dp_constraint(dpinfo)
             elif resinfo[2] in ["value"] and dpinfo[3]:
-                obj = self._dp_range_types[dpinfo[0]](dpinfo[3])
+                obj = self._transform_to_dp_type(dpinfo[0], dpinfo[3])
             if obj is None:
                 self.logger.warning(f"invalid dp constraint: {axiom}")
                 return None
@@ -587,7 +595,7 @@ class OntoEditor:
                         if inst[4] and not inst[4] in self._dp_range_types:
                             self.logger.warning(f"unexpected DP range: {inst}")
                         elif inst[4]:
-                            val = self._dp_range_types[inst[4]](inst[3])
+                            val = self._transform_to_dp_type(inst[4], inst[3])
                         else:
                             self.logger.warning(f"DP range undefined - defaulting to string: {inst}")
                             val = inst[3]

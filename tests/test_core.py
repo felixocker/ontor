@@ -79,11 +79,15 @@ class TestCore(unittest.TestCase):
     def test_dp(self):
         """ test if dp was created correctly with False as value
         """
-        dps = [["picked_up", None, True, "food", "boolean", None, None, None, None, None]]
-        ins = [["His_pizza", "margherita", "picked_up", False, "boolean"]]
+        dps = [["picked_up", None, True, "food", "boolean", None, None, None, None, None],
+               ["delivered", None, True, "food", "boolean", None, None, None, None, None]]
+        ins1 = [["His_pizza", "margherita", "picked_up", False, "boolean"]]
+        ins2 = ontor.load_csv(str(self.test_dir / "data/ins.csv"))
         self.ontor1.add_dps(dps)
-        self.ontor1.add_instances(ins)
+        self.ontor1.add_instances(ins1)
+        self.ontor1.add_instances(ins2)
         self.assertEqual(getattr(self.ontor1.onto["His_pizza"], "picked_up"), False, "bool value False not set correctly for dp")
+        self.assertEqual(getattr(self.ontor1.onto["His_pizza"], "delivered"), False, "bool value False not set correctly when extracted from csv")
 
     def test_label_creation(self):
         """ check label creation, also with localized strings

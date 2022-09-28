@@ -4,6 +4,8 @@
 [![PyPI](https://img.shields.io/pypi/v/ontor)](https://pypi.org/project/ontor/)
 [![License](https://img.shields.io/badge/license-GPLv3-blue)](https://www.gnu.org/licenses/gpl-3.0.html)
 
+<img src="https://github.com/felixocker/ontor/raw/main/docs/ontor-logo.svg" alt="ontor logo" width="500"/>
+
 # ONTology editOR (ontor)
 ontology editor built on [Owlready2](https://pypi.org/project/Owlready2/)
 

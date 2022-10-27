@@ -36,7 +36,7 @@ setuptools.setup(
         'networkx',
         'owlready2',
         'pandas',
-        'pyvis',
+        'pyvis==0.1.9',
     ],
 )
 

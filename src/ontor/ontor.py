@@ -44,7 +44,7 @@ from owlready2 import destroy_entity, get_ontology, onto_path, types,\
                       FunctionalProperty, InverseFunctionalProperty,\
                       TransitiveProperty, SymmetricProperty, AsymmetricProperty,\
                       ReflexiveProperty, IrreflexiveProperty, ThingClass,\
-                      Not, Inverse, base, locstr, And, Or, class_construct
+                      Not, Inverse, base, locstr, And, Or, ClassConstruct
 from pyvis.network import Network
 
 from . import config
@@ -387,7 +387,7 @@ class OntoEditor:
         self.onto.save(file=self.path)
 
     def _tuple_to_res(self, supercls: str, resinfo: list, opinfo: list, dpinfo: list, axiom: list)\
-            -> typing.Union[type(class_construct), None]:
+        -> typing.Union[ClassConstruct, None]:
         """
         :param supercls: parent class or equivalent class, depending on equiv parameter
         :param resinfo: list with general restriction info [prop, inverted, p_type,

@@ -27,16 +27,14 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     keywords=about["__keywords__"],
-
     include_package_data=True,  # include non-code files during installation
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
     python_requires=">=3.9",
     install_requires=[
-        'networkx',
-        'owlready2',
-        'pandas',
-        'pyvis==0.1.9',
+        "networkx",
+        "owlready2",
+        "pandas",
+        "pyvis==0.1.9",
     ],
 )
-

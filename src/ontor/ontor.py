@@ -37,26 +37,50 @@ from io import StringIO
 
 import networkx as nx
 import pandas as pd
-from owlready2 import destroy_entity, get_ontology, onto_path, types,\
-                      sync_reasoner_hermit, sync_reasoner_pellet, Thing, Nothing,\
-                      AllDisjoint, AllDifferent, DataProperty, ObjectProperty,\
-                      World, Restriction, ConstrainedDatatype,\
-                      FunctionalProperty, InverseFunctionalProperty,\
-                      TransitiveProperty, SymmetricProperty, AsymmetricProperty,\
-                      ReflexiveProperty, IrreflexiveProperty, ThingClass,\
-                      Not, Inverse, base, locstr, And, Or, class_construct
+from owlready2 import (
+    destroy_entity,
+    get_ontology,
+    onto_path,
+    types,
+    sync_reasoner_hermit,
+    sync_reasoner_pellet,
+    Thing,
+    Nothing,
+    AllDisjoint,
+    AllDifferent,
+    DataProperty,
+    ObjectProperty,
+    World,
+    Restriction,
+    ConstrainedDatatype,
+    FunctionalProperty,
+    InverseFunctionalProperty,
+    TransitiveProperty,
+    SymmetricProperty,
+    AsymmetricProperty,
+    ReflexiveProperty,
+    IrreflexiveProperty,
+    ThingClass,
+    Not,
+    Inverse,
+    base,
+    locstr,
+    And,
+    Or,
+    ClassConstruct,
+)
 from pyvis.network import Network
 
 from . import config
 from . import queries
 
 
-LOGFILE = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")+"_ontor.log"
+LOGFILE = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + "_ontor.log"
 logging.basicConfig(filename=LOGFILE, level=logging.DEBUG)
 
 
 def load_csv(csv_file: str, load_first_line: bool = False) -> list:
-    """ load data from CSV file
+    """load data from CSV file
 
     :param csv_file: input CSV file
     :param load_first_line: indicates whether content from first row is also returned
@@ -71,7 +95,7 @@ def load_csv(csv_file: str, load_first_line: bool = False) -> list:
 
 
 def load_json(json_file: str) -> typing.Union[dict, list]:
-    """ load data from JSON file
+    """load data from JSON file
 
     :param json_file: input JSON file
     :return: JSON contents as dictionary
@@ -82,7 +106,7 @@ def load_json(json_file: str) -> typing.Union[dict, list]:
 
 
 def cleanup(complete: bool, *extensions: str) -> None:
-    """ delete all files in the current directory with the extensions specified
+    """delete all files in the current directory with the extensions specified
 
     :param extensions: extensions of files to be deleted
     :param complete: do not delete current log file if set to False
@@ -97,8 +121,7 @@ def cleanup(complete: bool, *extensions: str) -> None:
 
 
 class InfoException(Exception):
-    """ exception for invalid ontor inputs
-    """
+    """exception for invalid ontor inputs"""
 
     def __init__(self, **kwargs: str):
         Exception.__init__(self)
@@ -106,22 +129,30 @@ class InfoException(Exception):
 
 
 class OntoEditor:
-    """ create, load, and edit ontologies
-    """
+    """create, load, and edit ontologies"""
 
     # NOTE: _prop_types corresponds to owlready2.prop._TYPE_PROPS; defined here to ensure order
-    _prop_types = [FunctionalProperty, InverseFunctionalProperty, TransitiveProperty,
-                   SymmetricProperty, AsymmetricProperty, ReflexiveProperty, IrreflexiveProperty]
-    _dp_range_types = {"boolean": bool,
-                       "float": float,
-                       "integer": int,
-                       "string": str,
-                       "date": datetime.date,
-                       "time": datetime.time,
-                       "datetime": datetime.datetime}
+    _prop_types = [
+        FunctionalProperty,
+        InverseFunctionalProperty,
+        TransitiveProperty,
+        SymmetricProperty,
+        AsymmetricProperty,
+        ReflexiveProperty,
+        IrreflexiveProperty,
+    ]
+    _dp_range_types = {
+        "boolean": bool,
+        "float": float,
+        "integer": int,
+        "string": str,
+        "date": datetime.date,
+        "time": datetime.time,
+        "datetime": datetime.datetime,
+    }
 
     def __init__(self, iri: str, path: str, import_paths: list = None) -> None:
-        """ tries to load onto from file specified, creates new file if none is available
+        """tries to load onto from file specified, creates new file if none is available
 
         :param iri: ontology's IRI
         :param path: path to local ontology file or URL; local is checked first
@@ -131,7 +162,7 @@ class OntoEditor:
         self.path = path
         self.filename = path.split(sep="/")[-1]
         self.logger = logging.getLogger(self.filename.split(".")[0])
-        self.query_prefixes = pkg_resources.read_text(queries, 'prefixes.sparql')
+        self.query_prefixes = pkg_resources.read_text(queries, "prefixes.sparql")
         onto_path.extend(list({path.rsplit("/", 1)[0]} - set(onto_path)))
         if import_paths:
             onto_path.extend(list(set(import_paths) - set(onto_path)))
@@ -159,13 +190,17 @@ class OntoEditor:
                 sys.stdout = old_stdout
                 sys.stderr = old_stderr
                 if result_out.getvalue():
-                    self.logger.info(f"reasoner output redirect: \n{self._indent_log(result_out.getvalue())}")
+                    self.logger.info(
+                        f"reasoner output redirect: \n{self._indent_log(result_out.getvalue())}"
+                    )
                 if result_err.getvalue():
-                    self.logger.info(f"reasoner errors redirect: \n{self._indent_log(result_err.getvalue())}")
+                    self.logger.info(
+                        f"reasoner errors redirect: \n{self._indent_log(result_err.getvalue())}"
+                    )
 
     @staticmethod
     def _indent_log(info: str) -> str:
-        return textwrap.indent(info, '>   ')
+        return textwrap.indent(info, ">   ")
 
     def _reload_from_file(self) -> None:
         try:
@@ -176,37 +211,48 @@ class OntoEditor:
             self.logger.error("ontology file did not exist")
             sys.exit(1)
 
+    def _transform_to_dp_type(self, data_type: str, val):
+        if data_type != "boolean":
+            return self._dp_range_types[data_type](val)
+        elif str(val).lower() == "false":
+            return False
+        elif str(val).lower() == "true":
+            return True
+
     def add_import(self, other_path: str) -> None:
-        """ load an additional onto
+        """load an additional onto
 
         :param other_path: path to file of onto to be imported
         """
         if "file://" in other_path:
-            onto_path.extend(list(set(other_path.rsplit("/", 1)[0].\
-                             removeprefix("file://")) - set(onto_path)))
+            onto_path.extend(
+                list(
+                    set(other_path.rsplit("/", 1)[0].removeprefix("file://"))
+                    - set(onto_path)
+                )
+            )
         onto_import = get_ontology(other_path).load()
         with self.onto:
             self.onto.imported_ontologies.append(onto_import)
-        self.onto.save(file = self.path)
+        self.onto.save(file=self.path)
 
     def save_as(self, new_path: str) -> None:
-        """ safe ontology as new file
+        """safe ontology as new file
         helpful, e.g., if multiple ontos were loaded
 
         :param new_path: path including filename for saving the onto
         """
-        self.onto.save(file = new_path)
+        self.onto.save(file=new_path)
         self.path = new_path
         self.filename = new_path.rsplit("/", 1)[1]
 
     def export_ntriples(self) -> None:
-        """ saves with same filename, but as ntriples
-        """
+        """saves with same filename, but as ntriples"""
         ntpath = self.path.rsplit(".", 1)[0] + ".nt"
         self.onto.save(file=ntpath, format="ntriples")
 
     def get_elems(self) -> list:
-        """ get classes, object properties, datatype properties, and instances
+        """get classes, object properties, datatype properties, and instances
 
         :return: nodes and edges from onto
         """
@@ -218,7 +264,7 @@ class OntoEditor:
         return [cl, ops, dps, ins]
 
     def _build_query(self, body: str) -> str:
-        """ use default prefixes to construct entire SPARQL query
+        """use default prefixes to construct entire SPARQL query
 
         :param body: body of the SPARQL query, without prefixes
         :return: complete SPARQL query consisting of prefixes and body
@@ -229,7 +275,7 @@ class OntoEditor:
         return gp + sp + "\n\n" + b
 
     def query_onto(self, query: str) -> list:
-        """ query onto using SPARQL
+        """query onto using SPARQL
         NOTE: use of query_owlready messes up ranges of dps
 
         :param query: SPARQL query
@@ -240,18 +286,18 @@ class OntoEditor:
         return list(graph.query(query))
 
     def get_axioms(self) -> list:
-        """ identify all axioms included in the onto
+        """identify all axioms included in the onto
 
         :return: list of class, op, and dp axioms
         """
         axioms = []
-        for body in ['class_axioms.sparql', 'op_axioms.sparql', 'dp_axioms.sparql']:
+        for body in ["class_axioms.sparql", "op_axioms.sparql", "dp_axioms.sparql"]:
             query_ax = pkg_resources.read_text(queries, body)
             axioms.append(self.query_onto(self._build_query(query_ax)))
         return axioms
 
     def _create_notion(self, name, parent, elem_type) -> type:
-        """ load a notion from the ontology or create a new one if not yet available
+        """load a notion from the ontology or create a new one if not yet available
         works for classes, object properties, and data properties
 
         :param name: name of the notion
@@ -266,16 +312,16 @@ class OntoEditor:
         }
         with self.onto:
             if name and not parent:
-                notion = types.new_class(name, (type_dict[elem_type], ))
+                notion = types.new_class(name, (type_dict[elem_type],))
             elif name and parent:
-                notion = types.new_class(name, (self.onto[parent], ))
+                notion = types.new_class(name, (self.onto[parent],))
             else:
                 self.logger.warning(f"unexpected info: {name, parent, elem_type}")
                 raise InfoException
         return notion
 
     def add_taxo(self, class_tuples: list) -> None:
-        """ add taxonomy to onto
+        """add taxonomy to onto
 
         :param class_tuples: list of 2-tuples of the form [class, superclass]
         """
@@ -290,17 +336,21 @@ class OntoEditor:
 
     @staticmethod
     def class_dict_to_tuple_list(cls_dict: dict) -> list:
-        """ helper function to convert dict with class definitions to list of
+        """helper function to convert dict with class definitions to list of
         tuples as required by add_taxo function
 
         :param cls_dict: dictionary for taxonomy definition of the form
             {superclass: [subclasses]}
         :return: list of class definition 2-tuples of the form [[subclass, superclass], ...]
         """
-        return [[subcls, supercls] for supercls in cls_dict.keys() for subcls in cls_dict[supercls]]
+        return [
+            [subcls, supercls]
+            for supercls in cls_dict.keys()
+            for subcls in cls_dict[supercls]
+        ]
 
     def _combine_axioms(self, axs: dict) -> tuple:
-        """ define complex axioms, i.e., elementary axioms that are logically combined
+        """define complex axioms, i.e., elementary axioms that are logically combined
 
         :param axs: input for axioms, either simple list or of the form {"or": [ax1, "and": [ax2, ax3]]}
         :return: combined restriction, restriction type (equivalence or subclass), and class
@@ -314,20 +364,33 @@ class OntoEditor:
         }
         assert len(axs.keys()) == 1, f"more than one operator defined for axiom: {axs}"
         operator = list(axs.keys())[0]
-        assert operator in ["and", "or"], f"invalid key for axiom combination: {operator}"
+        assert operator in [
+            "and",
+            "or",
+        ], f"invalid key for axiom combination: {operator}"
         for axiom in axs[operator]:
             if isinstance(axiom, list):
                 if not res_type_set:
                     res_type_set, res_type = True, res_type_vals[axiom[-1]]
                 else:
-                    assert res_type_vals[axiom[-1]] == res_type,\
-                        f"restriction types (subsumption vs equivalence) do not match: {axs}"
+                    assert (
+                        res_type_vals[axiom[-1]] == res_type
+                    ), f"restriction types (subsumption vs equivalence) do not match: {axs}"
                 if not cls:
                     cls = axiom[0]
                 else:
-                    assert axiom[0] == cls, f"aggregated restriction does not always refer to same class: {axs}"
-                res.append(self._tuple_to_res(axiom[1], [self.onto[axiom[2]], axiom[3], axiom[4], axiom[5], axiom[13]],
-                                              [self.onto[axiom[6]]], axiom[7:13], axiom))
+                    assert (
+                        axiom[0] == cls
+                    ), f"aggregated restriction does not always refer to same class: {axs}"
+                res.append(
+                    self._tuple_to_res(
+                        axiom[1],
+                        [self.onto[axiom[2]], axiom[3], axiom[4], axiom[5], axiom[13]],
+                        [self.onto[axiom[6]]],
+                        axiom[7:13],
+                        axiom,
+                    )
+                )
             elif isinstance(axiom, dict):
                 res.append(self._combine_axioms(axiom)[0])
         if operator == "and":
@@ -337,7 +400,7 @@ class OntoEditor:
         return comb, res_type, cls
 
     def add_axioms(self, axioms: list) -> None:
-        """ add entire axioms to onto
+        """add entire axioms to onto
         NOTE: only one axiom may be specified at once
         NOTE: no error handling implemented for input tuples
 
@@ -353,14 +416,28 @@ class OntoEditor:
                     my_class = self.onto[axiom[0]]
                     if not any(axiom[i] for i in [1, 2, 4, 5, 6]) and not axiom[5] == 0:
                         continue
-                    if all(axiom[i] for i in [0, 1, -1]) or all(axiom[i] for i in [2, 4, 6])\
-                            or all(axiom[i] for i in [2, 4, 7]):
+                    if (
+                        all(axiom[i] for i in [0, 1, -1])
+                        or all(axiom[i] for i in [2, 4, 6])
+                        or all(axiom[i] for i in [2, 4, 7])
+                    ):
                         if axiom[-1]:
                             current_axioms = my_class.equivalent_to
                         else:
                             current_axioms = my_class.is_a
-                        res = self._tuple_to_res(axiom[1], [self.onto[axiom[2]], axiom[3], axiom[4], axiom[5], axiom[13]],
-                                                 [self.onto[axiom[6]]], axiom[7:13], axiom)
+                        res = self._tuple_to_res(
+                            axiom[1],
+                            [
+                                self.onto[axiom[2]],
+                                axiom[3],
+                                axiom[4],
+                                axiom[5],
+                                axiom[13],
+                            ],
+                            [self.onto[axiom[6]]],
+                            axiom[7:13],
+                            axiom,
+                        )
                         if res:
                             current_axioms.append(res)
                     else:
@@ -378,8 +455,9 @@ class OntoEditor:
                         self.logger.warning(f"unexpected input: {axiom}")
         self.onto.save(file=self.path)
 
-    def _tuple_to_res(self, supercls: str, resinfo: list, opinfo: list, dpinfo: list, axiom: list)\
-            -> typing.Union[type(class_construct), None]:
+    def _tuple_to_res(
+        self, supercls: str, resinfo: list, opinfo: list, dpinfo: list, axiom: list
+    ) -> typing.Union[ClassConstruct, None]:
         """
         :param supercls: parent class or equivalent class, depending on equiv parameter
         :param resinfo: list with general restriction info [prop, inverted, p_type,
@@ -396,28 +474,38 @@ class OntoEditor:
         elif not any(opinfo) and any(dpinfo):
             obj = None
             if resinfo[1]:
-                self.logger.warning(f"invalid dp constraint - dp may not be inverted: {axiom}")
+                self.logger.warning(
+                    f"invalid dp constraint - dp may not be inverted: {axiom}"
+                )
                 return None
             if resinfo[2] in ["some", "only"]:
                 obj = self._dp_constraint(dpinfo)
             elif resinfo[2] in ["value"] and dpinfo[3]:
-                obj = self._dp_range_types[dpinfo[0]](dpinfo[3])
+                obj = self._transform_to_dp_type(dpinfo[0], dpinfo[3])
             if obj is None:
                 self.logger.warning(f"invalid dp constraint: {axiom}")
                 return None
             if resinfo[2] in ["exactly", "max", "min"]:
                 # NOTE: this may be resolved in future versions of Owlready2
-                self.logger.warning("qualified cardinality restrictions currently not "
-                                    f"supported for DPs: {axiom}")
+                self.logger.warning(
+                    "qualified cardinality restrictions currently not "
+                    f"supported for DPs: {axiom}"
+                )
                 return None
         else:
             self.logger.warning(f"restriction includes both op and dp: {axiom}")
             return None
         if resinfo[1]:
             resinfo[0] = Inverse(resinfo[0])
-        if resinfo[2] in ["some", "only", "value"] and not resinfo[3] and not resinfo[3] == 0:
+        if (
+            resinfo[2] in ["some", "only", "value"]
+            and not resinfo[3]
+            and not resinfo[3] == 0
+        ):
             res = getattr(resinfo[0], resinfo[2])(obj)
-        elif resinfo[2] in ["exactly", "max", "min"] and (resinfo[3] or resinfo[3] == 0):
+        elif resinfo[2] in ["exactly", "max", "min"] and (
+            resinfo[3] or resinfo[3] == 0
+        ):
             res = getattr(resinfo[0], resinfo[2])(resinfo[3], obj)
         else:
             self.logger.warning(f"unexpected cardinality definition: {axiom}")
@@ -438,43 +526,56 @@ class OntoEditor:
         if self._check_available_vals(dpres, [0]):
             dp_range = self._dp_range_types[dpres[0]]
         elif self._check_available_vals(dpres, [0, 3]):
-            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],
-                                           min_inclusive=dpres[3],
-                                           max_inclusive=dpres[3])
+            dp_range = ConstrainedDatatype(
+                self._dp_range_types[dpres[0]],
+                min_inclusive=dpres[3],
+                max_inclusive=dpres[3],
+            )
         elif self._check_available_vals(dpres, [0, 1, 4]):
-            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],
-                                           min_exclusive=dpres[1],
-                                           max_inclusive=dpres[4])
+            dp_range = ConstrainedDatatype(
+                self._dp_range_types[dpres[0]],
+                min_exclusive=dpres[1],
+                max_inclusive=dpres[4],
+            )
         elif self._check_available_vals(dpres, [0, 1, 5]):
-            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],
-                                           min_exclusive=dpres[1],
-                                           max_exclusive=dpres[5])
+            dp_range = ConstrainedDatatype(
+                self._dp_range_types[dpres[0]],
+                min_exclusive=dpres[1],
+                max_exclusive=dpres[5],
+            )
         elif self._check_available_vals(dpres, [0, 2, 4]):
-            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],
-                                           min_inclusive=dpres[2],
-                                           max_inclusive=dpres[4])
+            dp_range = ConstrainedDatatype(
+                self._dp_range_types[dpres[0]],
+                min_inclusive=dpres[2],
+                max_inclusive=dpres[4],
+            )
         elif self._check_available_vals(dpres, [0, 2, 5]):
-            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],
-                                           min_inclusive=dpres[2],
-                                           max_exclusive=dpres[5])
+            dp_range = ConstrainedDatatype(
+                self._dp_range_types[dpres[0]],
+                min_inclusive=dpres[2],
+                max_exclusive=dpres[5],
+            )
         elif self._check_available_vals(dpres, [0, 1]):
-            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],
-                                           min_exclusive=dpres[1])
+            dp_range = ConstrainedDatatype(
+                self._dp_range_types[dpres[0]], min_exclusive=dpres[1]
+            )
         elif self._check_available_vals(dpres, [0, 2]):
-            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],
-                                           min_inclusive=dpres[2])
+            dp_range = ConstrainedDatatype(
+                self._dp_range_types[dpres[0]], min_inclusive=dpres[2]
+            )
         elif self._check_available_vals(dpres, [0, 4]):
-            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],
-                                           max_inclusive=dpres[4])
+            dp_range = ConstrainedDatatype(
+                self._dp_range_types[dpres[0]], max_inclusive=dpres[4]
+            )
         elif self._check_available_vals(dpres, [0, 5]):
-            dp_range = ConstrainedDatatype(self._dp_range_types[dpres[0]],
-                                           max_exclusive=dpres[5])
+            dp_range = ConstrainedDatatype(
+                self._dp_range_types[dpres[0]], max_exclusive=dpres[5]
+            )
         else:
             self.logger.warning(f"unexpected dp range restriction: {dpres}")
         return dp_range
 
-    @staticmethod
-    def _check_available_vals(values: list, expected_values: list) -> bool:
+    def _check_available_vals(self, values: list, expected_values: list) -> bool:
         """
         :param values: list with values
         :param expected_values: list with indices of expected values
@@ -482,35 +583,51 @@ class OntoEditor:
         """
         indices = [x for x, _ in enumerate(values)]
         assert all(x in indices for x in expected_values), "invalid expected_values"
-        test = all(values[i] for i in expected_values) and\
-               not any(values[i] for i in [e for e in indices if e not in expected_values])
+        test = all(
+            self._check_value_validity(values[i]) for i in expected_values
+        ) and not any(
+            self._check_value_validity(values[i])
+            for i in [e for e in indices if e not in expected_values]
+        )
         return test
 
+    @staticmethod
+    def _check_value_validity(value) -> bool:
+        return value is not None and value != ""
+
     def add_gcas(self, gcas: list) -> None:
-        """ workaround for representing General Class Axioms
+        """workaround for representing General Class Axioms
         adds two helper classes, each defined via an axiom, that are defined to be equivalent
         helper classes are denoted with an underscore
 
         :param gcas: list of two-tuples with axioms as defined by add_axioms()
         """
         with self.onto:
+
             class GcaHelper(Thing):
-                comment = ["Helper class for workaround to represent General Class Axioms"]
+                comment = [
+                    "Helper class for workaround to represent General Class Axioms"
+                ]
+
             for gca in gcas:
                 for a in gca:
-                    gh_name = "_" + ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+                    gh_name = "_" + "".join(
+                        random.choices(string.ascii_letters + string.digits, k=16)
+                    )
                     a.insert(0, gh_name)
                     a.insert(1, "GcaHelper")
-                    assert a[-1] is True, "GCAs must be equivalented with auxiliary classes for inferences to work"
+                    assert (
+                        a[-1] is True
+                    ), "GCAs must be equivalented with auxiliary classes for inferences to work"
                 self.add_taxo([a[:2] for a in gca])
                 for a in gca:
                     a[1] = None
-                gca.append([gca[0][0], gca[1][0]] + [None]*12 + [True])
+                gca.append([gca[0][0], gca[1][0]] + [None] * 12 + [True])
                 self.add_axioms(gca)
         self.onto.save(file=self.path)
 
     def add_ops(self, op_tuples: list) -> None:
-        """ add object properties including their axioms to onto
+        """add object properties including their axioms to onto
         NOTE: only one inverse_prop can be processed per tuple
 
         :param op_tuples: list of tuples of the form [op, super-op, domain, range,
@@ -536,7 +653,7 @@ class OntoEditor:
         self.onto.save(file=self.path)
 
     def add_dps(self, dp_tuples: list) -> None:
-        """ add datatype properties including their axioms to onto
+        """add datatype properties including their axioms to onto
 
         :param dp_tuples: list of input tuples of the form [dp, super-dp, functional,
             domain, range, minex, minin, exact, maxin, maxex]
@@ -555,7 +672,7 @@ class OntoEditor:
                         my_dp.domain.append(self.onto[dp[3]])
                     except Exception:
                         self.logger.warning(f"unexpected dp domain: {dp}")
-                if any(dp[4:]):
+                if any(self._check_value_validity(d) for d in dp[4:]):
                     dprange = self._dp_constraint(dp[4:])
                     if dprange:
                         my_dp.range = dprange
@@ -565,7 +682,7 @@ class OntoEditor:
         self.onto.save(file=self.path)
 
     def add_instances(self, instance_tuples: list) -> None:
-        """ add instances and their relations to onto
+        """add instances and their relations to onto
 
         :param instance_tuples: list of tuples of the form [instance, class,
             property, range, range-type]
@@ -578,15 +695,17 @@ class OntoEditor:
                     self.logger.warning(f"unexpected instance info: {inst}")
                 if not any(inst[2:]):
                     continue
-                if inst[2] and inst[3]:
+                if inst[2] and self._check_value_validity(inst[3]):
                     pred = self.onto[inst[2]]
                     if DataProperty in pred.is_a:
                         if inst[4] and not inst[4] in self._dp_range_types:
                             self.logger.warning(f"unexpected DP range: {inst}")
                         elif inst[4]:
-                            val = self._dp_range_types[inst[4]](inst[3])
+                            val = self._transform_to_dp_type(inst[4], inst[3])
                         else:
-                            self.logger.warning(f"DP range undefined - defaulting to string: {inst}")
+                            self.logger.warning(
+                                f"DP range undefined - defaulting to string: {inst}"
+                            )
                             val = inst[3]
                     elif ObjectProperty in pred.is_a and not inst[4]:
                         val = self.onto[inst[3]]
@@ -603,13 +722,12 @@ class OntoEditor:
             getattr(subj, pred.name).append(obj)
 
     def add_distinctions(self, distinct_sets: list) -> None:
-        """ make classes disjoint and instances distinct
+        """make classes disjoint and instances distinct
         NOTE: distinctions may lead to inconsistencies reasoners cannot handle
 
         :param distinct_sets: list of lists with disjoint/ different elements
         """
-        funcs = {"classes": AllDisjoint,
-                 "instances": AllDifferent}
+        funcs = {"classes": AllDisjoint, "instances": AllDifferent}
         with self.onto:
             for ds in distinct_sets:
                 try:
@@ -620,7 +738,7 @@ class OntoEditor:
         self.onto.save(file=self.path)
 
     def remove_elements(self, elem_list: list) -> None:
-        """ remove elements, all their descendents and (in case of classes) instances,
+        """remove elements, all their descendents and (in case of classes) instances,
         and all references from axioms
 
         :param elem_list: list of elements to be removed from onto
@@ -637,7 +755,7 @@ class OntoEditor:
         self.onto.save(file=self.path)
 
     def add_label(self, name: str, label: str, lang: str = None) -> None:
-        """ add label in language specified as localized string, defaults to
+        """add label in language specified as localized string, defaults to
         regular string if no language is specified
 
         :param name: entity name
@@ -651,7 +769,7 @@ class OntoEditor:
         self._add_description_generic(desc, label, lang)
 
     def add_annotation(self, name: str, comment: str, lang: str = None) -> None:
-        """ add annotation in language specified as localized string, defaults to
+        """add annotation in language specified as localized string, defaults to
         regular string if no language is specified
 
         :param name: entity name
@@ -669,12 +787,15 @@ class OntoEditor:
         try:
             entity = self.onto[name]
         except AttributeError:
-            self.logger.info(f"unexpected entity: {name}, return None and continue anyways")
+            self.logger.info(
+                f"unexpected entity: {name}, return None and continue anyways"
+            )
         return entity
 
-    def _add_description_generic(self, desc_list: list, description: str,
-                                 lang: typing.Optional[str]) -> None:
-        """ add description in language specified as localized string, defaults to
+    def _add_description_generic(
+        self, desc_list: list, description: str, lang: typing.Optional[str]
+    ) -> None:
+        """add description in language specified as localized string, defaults to
         regular string if no language is specified
 
         :param desc_list: list to which to append the description
@@ -688,7 +809,7 @@ class OntoEditor:
         self.onto.save(file=self.path)
 
     def remove_from_taxo(self, elem_list: list, reassign: bool = True) -> None:
-        """ remove a class from the taxonomy, but keep all subclasses and instances
+        """remove a class from the taxonomy, but keep all subclasses and instances
         by relating them to parent
         NOTE: elem is not replaced in axioms bc this may be semantically incorrect
 
@@ -697,7 +818,9 @@ class OntoEditor:
         """
         with self.onto:
             for elem in elem_list:
-                parents = list(set(self.onto[elem].ancestors()).intersection(self.onto[elem].is_a))
+                parents = list(
+                    set(self.onto[elem].ancestors()).intersection(self.onto[elem].is_a)
+                )
                 parent = [p for p in parents if not p in self._prop_types]
                 if len(parent) > 1:
                     self.logger.warning(f"unexpected parent classes: {parents}")
@@ -705,8 +828,12 @@ class OntoEditor:
                 descendants.remove(self.onto[elem])
                 individuals = list(self.onto[elem].instances())
                 if reassign:
-                    sc_res = self.get_class_restrictions(self.onto[elem].name, res_type="is_a")
-                    eq_res = self.get_class_restrictions(self.onto[elem].name, res_type="equivalent_to")
+                    sc_res = self.get_class_restrictions(
+                        self.onto[elem].name, res_type="is_a"
+                    )
+                    eq_res = self.get_class_restrictions(
+                        self.onto[elem].name, res_type="equivalent_to"
+                    )
                 for desc in descendants:
                     desc.is_a.append(parent[0])
                     if reassign:
@@ -716,8 +843,10 @@ class OntoEditor:
                 destroy_entity(self.onto[elem])
         self.onto.save(file=self.path)
 
-    def get_class_restrictions(self, class_name: str, res_type: str = "is_a", res_only: bool = True) -> list:
-        """ retrieve restrictions on specific class by restriction type
+    def get_class_restrictions(
+        self, class_name: str, res_type: str = "is_a", res_only: bool = True
+    ) -> list:
+        """retrieve restrictions on specific class by restriction type
 
         :param class_name: name of the class for which restrictions shall be returned
         :param res_only: only returns Restrictions if set to True, if set to False
@@ -738,17 +867,17 @@ class OntoEditor:
         return elems
 
     def remove_restrictions_on_class(self, class_name: str) -> None:
-        """ remove all restrictions on a given class
+        """remove all restrictions on a given class
 
         :param class_name: name of the class for which restrictions shall be removed
         """
         with self.onto:
             for lst in self.onto[class_name].is_a, self.onto[class_name].equivalent_to:
                 self._remove_restr_from_class_def(lst)
-        self.onto.save(file = self.path)
+        self.onto.save(file=self.path)
 
     def remove_restrictions_including_prop(self, prop_name: str) -> None:
-        """ remove class restrictions that include a certain property
+        """remove class restrictions that include a certain property
 
         :param prop_name: name of the property for which all class restrictions
             shall be removed
@@ -757,11 +886,11 @@ class OntoEditor:
             for c in self.onto.classes():
                 for lst in c.is_a, c.equivalent_to:
                     self._remove_restr_from_class_def(lst, self.onto[prop_name])
-        self.onto.save(file = self.path)
+        self.onto.save(file=self.path)
 
     @staticmethod
     def _remove_restr_from_class_def(cls_restrictions, prop=None) -> None:
-        """ remove all restrictions from list
+        """remove all restrictions from list
 
         :param cls_restrictions: restrictions on a class, either is_a or equivalent_to
         :param prop: optional; limits results to restrictions including a certain property
@@ -770,8 +899,10 @@ class OntoEditor:
             if not prop or prop and r.property == prop:
                 cls_restrictions.remove(r)
 
-    def reasoning(self, reasoner: str = "hermit", save: bool = False, debug: bool = False) -> list:
-        """ run reasoner to check consistency and infer new facts
+    def reasoning(
+        self, reasoner: str = "hermit", save: bool = False, debug: bool = False
+    ) -> list:
+        """run reasoner to check consistency and infer new facts
 
         :param reasoner: reasoner can be eiter hermit or pellet
         :param save: bool - save inferences into original file
@@ -791,8 +922,12 @@ class OntoEditor:
                         sync_reasoner_hermit([inf_onto])
                     elif reasoner == "pellet":
                         # pellet explanations are generated if debug is set to >=2
-                        sync_reasoner_pellet([inf_onto], infer_property_values=True,
-                                             infer_data_property_values=True, debug=debug+1)
+                        sync_reasoner_pellet(
+                            [inf_onto],
+                            infer_property_values=True,
+                            infer_data_property_values=True,
+                            debug=debug + 1,
+                        )
                 inconsistent_classes = list(inf_onto.inconsistent_classes())
             except Exception as exc:
                 if reasoner == "pellet" and debug:
@@ -804,17 +939,19 @@ class OntoEditor:
             if Nothing in inconsistent_classes:
                 inconsistent_classes.remove(Nothing)
         elif save and not inconsistent_classes:
-            inf_onto.save(file = self.path)
+            inf_onto.save(file=self.path)
             self._reload_from_file()
         return inconsistent_classes
 
     def _check_reasoner(self, reasoner: str) -> None:
         reasoners = ["hermit", "pellet"]
         if reasoner not in reasoners:
-            self.logger.warning(f"unexpected reasoner: {reasoner} - available reasoners: {reasoners}")
+            self.logger.warning(
+                f"unexpected reasoner: {reasoner} - available reasoners: {reasoners}"
+            )
 
     def _analyze_pellet_results(self, exc: str) -> list:
-        """ analyze the explanation returned by Pellet, print it and return
+        """analyze the explanation returned by Pellet, print it and return
         inconsistent classes
         IDEA: also consider restrictions on properties and facts about instances
 
@@ -827,8 +964,12 @@ class OntoEditor:
         if expl[0]:
             print("Pellet provides the following explanation(s):")
             print(*expl[0], sep="\n")
-            inconsistent_classes = [self.onto[ax[0]] for ex in expl[1] for ax in ex\
-                                    if self.onto[ax[0]] in self.onto.classes()]
+            inconsistent_classes = [
+                self.onto[ax[0]]
+                for ex in expl[1]
+                for ax in ex
+                if self.onto[ax[0]] in self.onto.classes()
+            ]
         else:
             print("There was a more complex issue, check log for traceback")
             self.logger.error(self._indent_log(traceback.format_exc()))
@@ -836,21 +977,23 @@ class OntoEditor:
 
     @staticmethod
     def _extract_pellet_explanation(pellet_traceback: str) -> tuple:
-        """ extract reasoner explanation
+        """extract reasoner explanation
 
         :param pellet_traceback: traceback created when running reasoner
         :return: tuple of entire explanation and list of axioms included in explanation
         """
-        rex = re.compile(r"Explanation\(s\): \n(.*?)\n\n", re.DOTALL|re.MULTILINE)
+        rex = re.compile(r"Explanation\(s\): \n(.*?)\n\n", re.DOTALL | re.MULTILINE)
         res = set(re.findall(rex, pellet_traceback))
-        axioms: list=[]
+        axioms: list = []
         if res:
             expls = [[l[5:] for l in expl.split("\n")] for expl in res]
             axioms = [[axiom.split() for axiom in block] for block in expls]
         return (res, axioms)
 
-    def debug_onto(self, reasoner: str="hermit", assume_correct_taxo: bool=True) -> None:
-        """ interactively (CLI) fix inconsistencies
+    def debug_onto(
+        self, reasoner: str = "hermit", assume_correct_taxo: bool = True
+    ) -> None:
+        """interactively (CLI) fix inconsistencies
 
         :param assume_correct_taxo: if True, the user interactions will be limited
             to restrictions, i.e., options to delete taxonomical relations are
@@ -868,23 +1011,39 @@ class OntoEditor:
                 debug_onto = debug.get_ontology(self.path).load()
                 with debug_onto:
                     try:
-                        sync_reasoner_pellet([debug_onto], infer_property_values=True,
-                                             infer_data_property_values=True, debug=2)
+                        sync_reasoner_pellet(
+                            [debug_onto],
+                            infer_property_values=True,
+                            infer_data_property_values=True,
+                            debug=2,
+                        )
                     except base.OwlReadyInconsistentOntologyError as err:
                         self.logger.error(repr(err))
                         self.logger.error(self._indent_log(traceback.format_exc()))
-                        print("There was an issue with the input ontology; check the log for details.")
+                        print(
+                            "There was an issue with the input ontology; check the log for details."
+                        )
                         self._analyze_pellet_results(traceback.format_exc())
                     # IDEA: further analyze reasoner results to pin down cause of inconsistency
             if assume_correct_taxo:
-                pot_probl_ax = {"is_a": self._get_incon_class_res("is_a", inconsistent_classes),
-                                "equivalent_to": self._get_incon_class_res("equivalent_to", inconsistent_classes)}
+                pot_probl_ax = {
+                    "is_a": self._get_incon_class_res("is_a", inconsistent_classes),
+                    "equivalent_to": self._get_incon_class_res(
+                        "equivalent_to", inconsistent_classes
+                    ),
+                }
             else:
-                pot_probl_ax = {"is_a": [self.onto[ic.name].is_a for ic in inconsistent_classes],
-                                "equivalent_to": [self.onto[ic.name].equivalent_to for ic in inconsistent_classes]}
+                pot_probl_ax = {
+                    "is_a": [self.onto[ic.name].is_a for ic in inconsistent_classes],
+                    "equivalent_to": [
+                        self.onto[ic.name].equivalent_to for ic in inconsistent_classes
+                    ],
+                }
             ax_msg = "Potentially inconsistent axiom: "
             for rel in "is_a", "equivalent_to":
-                self._interactively_delete_axs_by_rel(rel, inconsistent_classes, pot_probl_ax, ax_msg)
+                self._interactively_delete_axs_by_rel(
+                    rel, inconsistent_classes, pot_probl_ax, ax_msg
+                )
             self.onto.save(file=self.path)
             self.debug_onto(reasoner, assume_correct_taxo)
 
@@ -893,9 +1052,14 @@ class OntoEditor:
         :param restype: type of class restriction, either is_a or equivalent_to
         :return: list of class restrictions for inconsistent_classes - does not return parent classes
         """
-        return [self.get_class_restrictions(ic.name, res_type=restype, res_only=True) for ic in inconsistent_classes]
+        return [
+            self.get_class_restrictions(ic.name, res_type=restype, res_only=True)
+            for ic in inconsistent_classes
+        ]
 
-    def _interactively_delete_axs_by_rel(self, rel: str, classes: list, axioms: dict, msg: str) -> None:
+    def _interactively_delete_axs_by_rel(
+        self, rel: str, classes: list, axioms: dict, msg: str
+    ) -> None:
         """
         :param rel: relation between class and axioms - is_a or equivalent_to
         :param classes: classes for which axioms are to be removed
@@ -904,8 +1068,10 @@ class OntoEditor:
         """
         for count, ic in enumerate(classes):
             for ax in axioms[rel][count]:
-                if self._bool_user_interaction("Delete " + rel + " axiom?",\
-                                               msg + ic.name + " " + rel + " " + str(ax)):
+                if self._bool_user_interaction(
+                    "Delete " + rel + " axiom?",
+                    msg + ic.name + " " + rel + " " + str(ax),
+                ):
                     if isinstance(ax, ThingClass):
                         getattr(self.onto[ic.name], rel).remove(self.onto[ax.name])
                     else:
@@ -914,10 +1080,8 @@ class OntoEditor:
 
     @staticmethod
     def _bool_user_interaction(question: str, info: str = None) -> bool:
-        """ simple CLI for yes/ no/ quit interaction
-        """
-        answer = {"y": True,
-                  "n": False}
+        """simple CLI for yes/ no/ quit interaction"""
+        answer = {"y": True, "n": False}
         if info:
             print(info)
         print(question + " [y(es), n(o), q(uit)]")
@@ -934,26 +1098,32 @@ class OntoEditor:
     @staticmethod
     def _remove_nt_brackets(triple: list) -> list:
         for c, _ in enumerate(triple):
-            triple[c] = triple[c].replace('<', '')
-            triple[c] = triple[c].replace('>', '')
+            triple[c] = triple[c].replace("<", "")
+            triple[c] = triple[c].replace(">", "")
         return triple
 
     @staticmethod
     def _df_to_nx_incl_labels(df: pd.DataFrame, coloring: dict) -> nx.MultiDiGraph:
-        """ turns a pandas dataframe into a networkx graph
+        """turns a pandas dataframe into a networkx graph
 
         :param df: pandas df with spo-triples
         :param coloring: dict with colors as keys and lists of nodes as values
         :return: nxgraph for the ontology including labels and coloring
         """
-        nxgraph = nx.from_pandas_edgelist(df, source="subject", target="object",
-                                          edge_attr="predicate", create_using=nx.MultiDiGraph())
+        nxgraph = nx.from_pandas_edgelist(
+            df,
+            source="subject",
+            target="object",
+            edge_attr="predicate",
+            create_using=nx.MultiDiGraph(),
+        )
         # manually set predicates as labels
         for e in nxgraph.edges.items():
             e[1]["label"] = e[1].pop("predicate")
         # assert that a node may not have more than one color
-        assert not set(list(coloring.values())[0]).intersection(*list(coloring.values())),\
-            "Several colors specified for one node"
+        assert not set(list(coloring.values())[0]).intersection(
+            *list(coloring.values())
+        ), "Several colors specified for one node"
         for n in nxgraph.nodes.items():
             for color in coloring.keys():
                 if n[0] in coloring[color]:
@@ -966,25 +1136,40 @@ class OntoEditor:
             lines = f.readlines()
         df = pd.DataFrame(columns=["subject", "predicate", "object"])
         for rownum, row in enumerate(lines):
-            df.loc[rownum] = self._remove_nt_brackets(row.rsplit(".", 1)[0].split(" ")[:3])
+            df.loc[rownum] = self._remove_nt_brackets(
+                row.rsplit(".", 1)[0].split(" ")[:3]
+            )
         return df
 
     @staticmethod
     def _query_results_to_df(query_results: list) -> pd.DataFrame:
-        clean_data = [[str(elem).rsplit("#", maxsplit=1)[-1] for elem in row] for row in query_results]
-        df = pd.DataFrame(clean_data, columns=['subject', 'predicate', 'object'])
+        clean_data = [
+            [str(elem).rsplit("#", maxsplit=1)[-1] for elem in row]
+            for row in query_results
+        ]
+        df = pd.DataFrame(clean_data, columns=["subject", "predicate", "object"])
         return df
 
-    def _plot_nxgraph(self, nxgraph: nx.MultiDiGraph, open_html: bool = False,
-                      interactive: bool = False) -> None:
-        """ create html file for the network's plot
+    def _plot_nxgraph(
+        self,
+        nxgraph: nx.MultiDiGraph,
+        open_html: bool = False,
+        interactive: bool = False,
+    ) -> None:
+        """create html file for the network's plot
 
         :param nxgraph: networkx graph including the ontology's triples
         :param open_html: directly open the html file created using the default program
         :param interactive: activates mode for changing network appearance
         """
-        net = Network(directed=True, height='100%', width='100%', bgcolor='#222222', font_color='white')
-        net.set_options(pkg_resources.read_text(config, 'network_visualization.config'))
+        net = Network(
+            directed=True,
+            height="100%",
+            width="100%",
+            bgcolor="#222222",
+            font_color="white",
+        )
+        net.set_options(pkg_resources.read_text(config, "network_visualization.config"))
         net.from_nx(nxgraph)
         if interactive:
             net.show_buttons()
@@ -994,41 +1179,70 @@ class OntoEditor:
         else:
             net.write_html(html_name)
 
-    def _config_plot_query_body(self, classes: list = None, properties: list = None,
-                                focusnode: str = None, radius: int = None, include_class_res: bool = True,
-                                show_class_descendants: bool = True) -> str:
-        """ configure body for SPARQL query that identifies triples for plot
+    def _config_plot_query_body(
+        self,
+        classes: list = None,
+        properties: list = None,
+        focusnode: str = None,
+        radius: int = None,
+        tbox_only: bool = False,
+        include_class_res: bool = True,
+        show_class_descendants: bool = True,
+    ) -> str:
+        """configure body for SPARQL query that identifies triples for plot
 
         :param classes: classes to be returned including their instances
         :param properties: properties to be returned
         :param focusnode: node whose environment shall be displayed
         :param radius: maximum distance, i.e., relations, between a node and focusnode
+        :param tbox_only: limit query to TBox if set to True
         :param include_class_res: also return simplified spo-triples for class
             restrictions if True
         :param show_class_descendants: also explicitly include subclasses of the classes specified
         :return: body for SPARQL query
         """
         max_radius = 5
-        nodes_to_be_ignored = ["owl:Class", "owl:Thing", "owl:NamedIndividual", "owl:Restriction"]
+        nodes_to_be_ignored = [
+            "owl:Class",
+            "owl:Thing",
+            "owl:NamedIndividual",
+            "owl:Restriction",
+        ]
 
         if classes and show_class_descendants:
-            descendent_lists = [[desc.name for desc in self.onto[c].descendants()] for c in classes]
+            descendent_lists = [
+                [desc.name for desc in self.onto[c].descendants()] for c in classes
+            ]
             subclasses = list({c for sublist in descendent_lists for c in sublist})
         elif classes and not show_class_descendants:
             subclasses = classes
 
         def _sparql_set_values(node, values):
-            return "VALUES ?" + node + " {rdf:type rdfs:subClassOf " + " ".join([":" + v for v in values]) + "} . "
+            return (
+                "VALUES ?"
+                + node
+                + " {rdf:type rdfs:subClassOf "
+                + " ".join([":" + v for v in values])
+                + "} . "
+            )
 
         def _sparql_set_in(node, values, sep=None):
             if not sep:
                 sep = ""
-            return "FILTER ( ?" + node + " IN (" + ", ".join([sep + v for v in values]) + ") ) . "
+            return (
+                "FILTER ( ?"
+                + node
+                + " IN ("
+                + ", ".join([sep + v for v in values])
+                + ") ) . "
+            )
 
-        querypt_class_rels = ("?s rdfs:subClassOf | owl:equivalentClass ?res . \n"
-                              "?res a owl:Restriction . \n"
-                              "?res owl:onProperty ?p . \n"
-                              "?res owl:onClass | owl:someValuesFrom | owl:allValuesFrom | owl:hasValue ?o . ")
+        querypt_class_rels = (
+            "?s rdfs:subClassOf | owl:equivalentClass ?res . \n"
+            "?res a owl:Restriction . \n"
+            "?res owl:onProperty ?p . \n"
+            "?res owl:onClass | owl:someValuesFrom | owl:allValuesFrom | owl:hasValue ?o . "
+        )
         querypt1 = "SELECT DISTINCT ?s ?p ?o WHERE {\n"
 
         if include_class_res:
@@ -1042,18 +1256,42 @@ class OntoEditor:
         else:
             querypt_rels = ""
         if classes:
-            query_nodes_dict: dict={}
+            query_nodes_dict: dict = {}
             for node in ["s", "o"]:
-                querypt_classes = "?s ?p ?o . \n" + _sparql_set_in(node, subclasses, ":")
-                querypt_class_res = querypt_class_rels + "\n" + _sparql_set_in(node, subclasses, ":")
-                querypt_instances = "{\n?" + node + " a/rdfs:subClassOf* ?" + node +\
-                                    "class . \n" + _sparql_set_in(node+"class", classes, ":") +\
-                                    "\n} UNION {\n?s ?p ?o . \nFILTER NOT EXISTS {?" + node +\
-                                    " a ?" + node + "p . }\nFILTER NOT EXISTS {?" + node +\
-                                    " rdfs:subClassOf ?" + node + "p . } \n}"
-                query_nodes_dict[node] = "{\n" + querypt_classes + "\n} UNION {\n" +\
-                                         querypt_class_res + "\n} UNION {\n" +\
-                                         querypt_instances + "\n}"
+                querypt_classes = "?s ?p ?o . \n" + _sparql_set_in(
+                    node, subclasses, ":"
+                )
+                querypt_class_res = (
+                    querypt_class_rels + "\n" + _sparql_set_in(node, subclasses, ":")
+                )
+                querypt_instances = (
+                    "{\n?"
+                    + node
+                    + " a/rdfs:subClassOf* ?"
+                    + node
+                    + "class . \n"
+                    + _sparql_set_in(node + "class", classes, ":")
+                    + "\n} UNION {\n?s ?p ?o . \nFILTER NOT EXISTS {?"
+                    + node
+                    + " a ?"
+                    + node
+                    + "p . }\nFILTER NOT EXISTS {?"
+                    + node
+                    + " rdfs:subClassOf ?"
+                    + node
+                    + "p . } \n}"
+                )
+                query_nodes_dict[node] = (
+                    "{\n"
+                    + querypt_classes
+                    + "\n} UNION {\n"
+                    + querypt_class_res
+                    + "\n}"
+                )
+                if not tbox_only:
+                    query_nodes_dict[node] += " UNION {\n"
+                    query_nodes_dict[node] += querypt_instances
+                    query_nodes_dict[node] += "\n}"
             querypt_nodes = "\n".join(query_nodes_dict.values())
         else:
             querypt_nodes = ""
@@ -1064,19 +1302,43 @@ class OntoEditor:
                 rels = properties
             else:
                 rels = [p.name for p in self.onto.properties()]
-            query_rel_lim = ":" + focusnode + " " + "?/".join(["(rdf:type|rdfs:subClassOf|:" +\
-                                                               "|:".join(rels) + ")"]*radius) + "? ?o . "
+            query_rel_lim = (
+                ":"
+                + focusnode
+                + " "
+                + "?/".join(
+                    ["(rdf:type|rdfs:subClassOf|:" + "|:".join(rels) + ")"] * radius
+                )
+                + "? ?o . "
+            )
         elif focusnode and not radius or not focusnode and radius:
-            self.logger.warning("focus: both a focusnode and a radius must be specified - ignoring the focus")
+            self.logger.warning(
+                "focus: both a focusnode and a radius must be specified - ignoring the focus"
+            )
         querypt_ignore = ""
         for node in ["s", "o"]:
-            querypt_ignore += "\nMINUS {\n?s ?p ?o . \n" + _sparql_set_in(node, nodes_to_be_ignored) + "\n}"
+            querypt_ignore += (
+                "\nMINUS {\n?s ?p ?o . \n"
+                + _sparql_set_in(node, nodes_to_be_ignored)
+                + "\n}"
+            )
         querypt_ignore += "\nMINUS {\n?s ?p ?o . \n ?o a owl:Restriction . \n}"
-        query_body = "\n".join([querypt1, querypt_rels, querypt_nodes, query_rel_lim, querypt_ignore, querypt2])
+        query_body = "\n".join(
+            [
+                querypt1,
+                querypt_rels,
+                querypt_nodes,
+                query_rel_lim,
+                querypt_ignore,
+                querypt2,
+            ]
+        )
         return query_body
 
-    def _render_by_label(self, graph: nx.MultiDiGraph, lang: str = None) -> nx.MultiDiGraph:
-        """ relabel the networkx graph's nodes and edges using the labels specified
+    def _render_by_label(
+        self, graph: nx.MultiDiGraph, lang: str = None
+    ) -> nx.MultiDiGraph:
+        """relabel the networkx graph's nodes and edges using the labels specified
         in the ontology (if there are labels available); defaults to first label
 
         :param graph: input graph w/ names
@@ -1096,7 +1358,7 @@ class OntoEditor:
         return graph
 
     def _name_to_label(self, name: str, lang: str = None) -> str:
-        """ return (first) label for an entity in the language specified
+        """return (first) label for an entity in the language specified
 
         :param elem: name of the ontology's element
         :param lang: indicates desired label language, can be none to simply use
@@ -1117,9 +1379,18 @@ class OntoEditor:
             label = name
         return label
 
-    def visualize(self, classes: list = None, properties: list = None, focusnode: str = None,
-                  radius: int = None, bylabel: bool = False, lang: str = None, open_html: bool = False) -> None:
-        """ visualize onto as a graph; generates html
+    def visualize(
+        self,
+        classes: list = None,
+        properties: list = None,
+        focusnode: str = None,
+        radius: int = None,
+        bylabel: bool = False,
+        lang: str = None,
+        open_html: bool = False,
+        tbox_only: bool = False,
+    ) -> None:
+        """visualize onto as a graph; generates html
 
         :param classes: list of classes to be included in plot
         :param properties: list of properties to be included in plot
@@ -1129,18 +1400,23 @@ class OntoEditor:
         :param bylabel: render visualization by labels (if available)
         :param lang: language of the labels to be displayed
         :param open_html: open html file generated
+        :param tbox_only: only visualizes TBox if set to True
         :return: None
         """
         # graph coloring settings; note that literals default to grey
         classcolor = "#0065bd"
         instancecolor = "#98c6ea"
-        coloring = {classcolor: [c.name for c in self.onto.classes()],
-                    instancecolor: [i.name for i in self.onto.individuals()]}
+        coloring = {
+            classcolor: [c.name for c in self.onto.classes()],
+            instancecolor: [i.name for i in self.onto.individuals()],
+        }
 
         if not classes and not properties and not focusnode and not radius:
             graphdata = self._ntriples_to_df()
         else:
-            query_body = self._config_plot_query_body(classes, properties, focusnode, radius)
+            query_body = self._config_plot_query_body(
+                classes, properties, focusnode, radius, tbox_only
+            )
             query_results = self.query_onto(self._build_query(query_body))
             graphdata = self._query_results_to_df(query_results)
         nxgraph = self._df_to_nx_incl_labels(graphdata, coloring)

@@ -1,7 +1,11 @@
-[![Build Status](https://cloud.drone.io/api/badges/felixocker/ontor/status.svg)](https://cloud.drone.io/felixocker/ontor)
+[![Current Release Version](https://img.shields.io/github/v/release/felixocker/ontor?logo=github)](https://github.com/felixocker/ontor/releases/)
+[![Test and Build](https://img.shields.io/github/workflow/status/felixocker/ontor/test-and-build?logo=github)](https://github.com/felixocker/ontor/actions/workflows/publish-to-testpypi.yml)
 [![Documentation Status](https://readthedocs.org/projects/felixocker-ontor/badge/?version=latest)](https://felixocker-ontor.readthedocs.io/en/latest/?badge=latest)
 [![PyPI](https://img.shields.io/pypi/v/ontor)](https://pypi.org/project/ontor/)
 [![License](https://img.shields.io/badge/license-GPLv3-blue)](https://www.gnu.org/licenses/gpl-3.0.html)
+[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+<img src="https://github.com/felixocker/ontor/raw/main/docs/ontor-logo.svg" alt="ontor logo" width="500"/>
 
 # ONTology editOR (ontor)
 ontology editor built on [Owlready2](https://pypi.org/project/Owlready2/)

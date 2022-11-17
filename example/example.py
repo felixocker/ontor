@@ -251,6 +251,14 @@ def modify_onto():
         open_html=True,
     )
 
+    ontor3.visualize(
+        classes=["human", "food"],
+        tbox_only=True,
+        bylabel=False,
+        lang=None,
+        open_html=True,
+    )
+
 
 def _test_rm(as_is: list, as_expected: list, elem: str) -> None:
     """check whether remove function worked as expected

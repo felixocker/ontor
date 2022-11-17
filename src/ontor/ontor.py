@@ -1185,6 +1185,7 @@ class OntoEditor:
         properties: list = None,
         focusnode: str = None,
         radius: int = None,
+        tbox_only: bool = False,
         include_class_res: bool = True,
         show_class_descendants: bool = True,
     ) -> str:
@@ -1194,6 +1195,7 @@ class OntoEditor:
         :param properties: properties to be returned
         :param focusnode: node whose environment shall be displayed
         :param radius: maximum distance, i.e., relations, between a node and focusnode
+        :param tbox_only: limit query to TBox if set to True
         :param include_class_res: also return simplified spo-triples for class
             restrictions if True
         :param show_class_descendants: also explicitly include subclasses of the classes specified
@@ -1284,10 +1286,12 @@ class OntoEditor:
                     + querypt_classes
                     + "\n} UNION {\n"
                     + querypt_class_res
-                    + "\n} UNION {\n"
-                    + querypt_instances
                     + "\n}"
                 )
+                if not tbox_only:
+                    query_nodes_dict[node] += " UNION {\n"
+                    query_nodes_dict[node] += querypt_instances
+                    query_nodes_dict[node] += "\n}"
             querypt_nodes = "\n".join(query_nodes_dict.values())
         else:
             querypt_nodes = ""
@@ -1384,6 +1388,7 @@ class OntoEditor:
         bylabel: bool = False,
         lang: str = None,
         open_html: bool = False,
+        tbox_only: bool = False,
     ) -> None:
         """visualize onto as a graph; generates html
 
@@ -1395,6 +1400,7 @@ class OntoEditor:
         :param bylabel: render visualization by labels (if available)
         :param lang: language of the labels to be displayed
         :param open_html: open html file generated
+        :param tbox_only: only visualizes TBox if set to True
         :return: None
         """
         # graph coloring settings; note that literals default to grey
@@ -1409,7 +1415,7 @@ class OntoEditor:
             graphdata = self._ntriples_to_df()
         else:
             query_body = self._config_plot_query_body(
-                classes, properties, focusnode, radius
+                classes, properties, focusnode, radius, tbox_only
             )
             query_results = self.query_onto(self._build_query(query_body))
             graphdata = self._query_results_to_df(query_results)

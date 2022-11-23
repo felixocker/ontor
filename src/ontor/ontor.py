@@ -417,7 +417,7 @@ class OntoEditor:
                     if not any(axiom[i] for i in [1, 2, 4, 5, 6]) and not axiom[5] == 0:
                         continue
                     if (
-                        all(axiom[i] for i in [0, 1, -1])
+                        all(axiom[i] is not None for i in [0, 1, -1])
                         or all(axiom[i] for i in [2, 4, 6])
                         or all(axiom[i] for i in [2, 4, 7])
                     ):

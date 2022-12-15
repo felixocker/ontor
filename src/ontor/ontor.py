@@ -314,7 +314,7 @@ class OntoEditor:
             if name and not parent:
                 notion = types.new_class(name, (type_dict[elem_type],))
             elif name and parent:
-                notion = types.new_class(name, (self.onto[parent],))
+                notion = types.new_class(name, (self.onto[parent], type_dict[elem_type],))
             else:
                 self.logger.warning(f"unexpected info: {name, parent, elem_type}")
                 raise InfoException

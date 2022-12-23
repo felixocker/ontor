@@ -1,5 +1,5 @@
 [![Current Release Version](https://img.shields.io/github/v/release/felixocker/ontor?logo=github)](https://github.com/felixocker/ontor/releases/)
-[![Test and Build](https://img.shields.io/github/workflow/status/felixocker/ontor/test-and-build?logo=github)](https://github.com/felixocker/ontor/actions/workflows/publish-to-testpypi.yml)
+[![Test and Build](https://img.shields.io/github/actions/workflow/status/felixocker/ontor/publish-to-testpypi.yml?branch=main&logo=github)](https://github.com/felixocker/ontor/actions/workflows/publish-to-testpypi.yml)
 [![Documentation Status](https://readthedocs.org/projects/felixocker-ontor/badge/?version=latest)](https://felixocker-ontor.readthedocs.io/en/latest/?badge=latest)
 [![PyPI](https://img.shields.io/pypi/v/ontor)](https://pypi.org/project/ontor/)
 [![License](https://img.shields.io/badge/license-GPLv3-blue)](https://www.gnu.org/licenses/gpl-3.0.html)

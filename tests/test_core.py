@@ -9,6 +9,8 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from owlready2.class_construct import Restriction
+from owlready2 import DataProperty
+from owlready2 import FunctionalProperty
 
 import ontor
 
@@ -256,6 +258,37 @@ class TestCore(unittest.TestCase):
             getattr(self.ontor1.onto["His_pizza"], "delivered"),
             False,
             "bool value False not set correctly when extracted from csv",
+        )
+
+    def test_dp_hierarchy(self):
+        """test if dp hierarchies are usable right away"""
+        cls = [
+            ["foo", None],
+        ]
+        dps = [
+            ["has_value", None, True, None, None, None, None, None, None, None],
+            [
+                "has_string_value",
+                "has_value",
+                True,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ],
+        ]
+        ins = [
+            ["bar", "foo", "has_string_value", "baz", "string"],
+        ]
+        self.ontor1.add_taxo(cls)
+        self.ontor1.add_dps(dps)
+        self.ontor1.add_instances(ins)
+        self.assertEqual(
+            set(self.ontor1.onto["has_string_value"].is_a),
+            {DataProperty, FunctionalProperty, self.ontor1.onto["has_value"]},
         )
 
     def test_label_creation(self):

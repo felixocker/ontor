@@ -249,6 +249,10 @@ def modify_onto():
         bylabel=False,
         lang=None,
         open_html=True,
+        bgcolor="#FFFFFF",
+        classcolor="#7303fc",
+        instancecolor="#03dbfc",
+        font_color="#222222",
     )
 
     ontor3.visualize(

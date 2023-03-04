@@ -314,7 +314,13 @@ class OntoEditor:
             if name and not parent:
                 notion = types.new_class(name, (type_dict[elem_type],))
             elif name and parent and elem_type != "c":
-                notion = types.new_class(name, (self.onto[parent], type_dict[elem_type],))
+                notion = types.new_class(
+                    name,
+                    (
+                        self.onto[parent],
+                        type_dict[elem_type],
+                    ),
+                )
             elif name and parent and elem_type == "c":
                 notion = types.new_class(name, (self.onto[parent],))
             else:
@@ -1155,12 +1161,16 @@ class OntoEditor:
     def _plot_nxgraph(
         self,
         nxgraph: nx.MultiDiGraph,
+        bgcolor: str = "#222222",
+        font_color: str = "#FFFFFF",
         open_html: bool = False,
         interactive: bool = False,
     ) -> None:
         """create html file for the network's plot
 
         :param nxgraph: networkx graph including the ontology's triples
+        :param bgcolor: background color as a hex code
+        :param font_color: font color for nodes as a hex code
         :param open_html: directly open the html file created using the default program
         :param interactive: activates mode for changing network appearance
         """
@@ -1168,8 +1178,8 @@ class OntoEditor:
             directed=True,
             height="100%",
             width="100%",
-            bgcolor="#222222",
-            font_color="white",
+            bgcolor=bgcolor,
+            font_color=font_color,
         )
         net.set_options(pkg_resources.read_text(config, "network_visualization.config"))
         net.from_nx(nxgraph)
@@ -1391,6 +1401,10 @@ class OntoEditor:
         lang: str = None,
         open_html: bool = False,
         tbox_only: bool = False,
+        bgcolor: str = "#222222",
+        classcolor: str = "#0065bd",
+        instancecolor: str = "#98c6ea",
+        font_color: str = "#FFFFFF",
     ) -> None:
         """visualize onto as a graph; generates html
 
@@ -1403,11 +1417,13 @@ class OntoEditor:
         :param lang: language of the labels to be displayed
         :param open_html: open html file generated
         :param tbox_only: only visualizes TBox if set to True
+        :param bgcolor: background color for the plot as a hex code
+        :param classcolor: color of class nodes as a hex code
+        :param instancecolor: color of instance nodes as a hex code
+        :param font_color: font color for nodes as a hex code
         :return: None
         """
         # graph coloring settings; note that literals default to grey
-        classcolor = "#0065bd"
-        instancecolor = "#98c6ea"
         coloring = {
             classcolor: [c.name for c in self.onto.classes()],
             instancecolor: [i.name for i in self.onto.individuals()],
@@ -1424,4 +1440,6 @@ class OntoEditor:
         nxgraph = self._df_to_nx_incl_labels(graphdata, coloring)
         if bylabel:
             nxgraph = self._render_by_label(nxgraph, lang)
-        self._plot_nxgraph(nxgraph, open_html)
+        self._plot_nxgraph(
+            nxgraph=nxgraph, open_html=open_html, bgcolor=bgcolor, font_color=font_color
+        )
